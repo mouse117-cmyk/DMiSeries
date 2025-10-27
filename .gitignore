@@ -1,0 +1,18 @@
+# Editors.
+*.sw*
+.vscode
+.DS_Store
+.idea
+.uuid
+cmake-build-debug
+
+# Build directory.
+build/
+out/
+cloud_pcache/
+
+test/devops100000.txt
+memory_usage*
+
+db/DB.pb.h
+db/DB.pb.cc

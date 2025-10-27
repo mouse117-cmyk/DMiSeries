@@ -1,0 +1,4 @@
+add_subdirectory(masstree_test)
+add_subdirectory(thmap_test)
+add_subdirectory(free_lock_wal_test)
+add_subdirectory(atomic_queue_test)

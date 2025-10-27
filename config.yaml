@@ -1,0 +1,20 @@
+# TreeHead
+db_path: /tmp/tsdb_big
+log_path: /tmp/tsdb_big_log
+wal_num: 5
+
+# TreeSeries
+tree_series_path: /home/dell/project/SSD/tree_series_test
+tree_series_info_path: /home/dell/project/SSD/tree_series_info_test
+tree_series_thread_pool_size: 4
+max_slab_memory: 4  # GB
+read_buffer_size: 256 # MB
+max_series_num: 16    # must be predefined due to its use in struct SlabInfo, so it has no usage for now
+slab_item_size: 256   # Byte
+chunk_size: 248 # Byte
+slab_size: 4  # KB
+
+# LevelDB Options
+leveldb_max_imm_num: 3
+leveldb_write_buffer_size: 256  # MB
+leveldb_max_file_size: 256  # MB
