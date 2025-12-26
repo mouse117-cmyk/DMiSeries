@@ -22,7 +22,7 @@ namespace tsdb::querier {
             std::string info_path = "/home/dell/project/SSD/tree_series_info_test";
             int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
             setting->ssd_slab_info_ = "/home/dell/project/SSD/tree_series_info_test";
-            tree_series_ = new slab::TreeSeries(*setting);
+            tree_series_ = new slab::ValueLog(*setting);
 
             boost::filesystem::remove_all(sep_db_path);
             boost::filesystem::remove_all(db_path);
@@ -53,7 +53,7 @@ namespace tsdb::querier {
 
         head::SpanHead* head_;
         leveldb::DB* db_;
-        slab::TreeSeries* tree_series_;
+        slab::ValueLog* tree_series_;
     };
 
     TEST_F(TreeQuerierTest, Test1) {
@@ -68,7 +68,7 @@ namespace tsdb::querier {
         uint64_t idx = min_time;
 
 //        slab
-        auto ts_iter = new TreeSeriesIterator(tree_series_, min_time, max_time, 1, 1);
+        auto ts_iter = new ValueLogIterator(tree_series_, min_time, max_time, 1, 1);
         while (ts_iter->next()) {
             auto it = ts_iter->at();
             ASSERT_EQ(idx, it.first);

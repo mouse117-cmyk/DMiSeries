@@ -113,7 +113,7 @@ namespace tsdb::querier {
      *  SlabArrayIterator
      * **************************************** */
 
-    SlabArrayIterator::SlabArrayIterator(slab::TreeSeries *tree_series, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
+    SlabArrayIterator::SlabArrayIterator(slab::ValueLog *value_log, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
             : slab_iter_(slab_array),
               min_time_(min_time),
               max_time_(max_time),
@@ -125,7 +125,7 @@ namespace tsdb::querier {
               sub_idx_(0),
               slab_idx_(0),
               item_idx_(0),
-              tree_series_(tree_series),
+              value_log_(value_log),
               cache_(cache),
               handle_(nullptr){
         if (min_time_ < 0) min_time_ = 0;
@@ -392,7 +392,7 @@ namespace tsdb::querier {
 //        res->timestamp_ = item->timestamp_;
 //        memcpy(res->chunk_, item->chunk_, slab::CHUNK_SIZE);
 //        return res;
-//        tree_series_->PrintItem(item);
+//        value_log_->PrintItem(item);
         return item;
     }
 
@@ -419,7 +419,7 @@ namespace tsdb::querier {
             return;
         }
         std::string key;
-        tree_series_->EnCodeKey(&key, sgid_, mid_, item->timestamp_);
+        value_log_->EnCodeKey(&key, sgid_, mid_, item->timestamp_);
         decode_value(key, leveldb::Slice(reinterpret_cast<const char *>(item->chunk_), slab::CHUNK_SIZE));
     }
 
@@ -440,38 +440,38 @@ namespace tsdb::querier {
     }
 
     /* ****************************************
-     *  TreeSeriesIterator
+     *  ValueLogIterator
      * **************************************** */
 
-    TreeSeriesIterator::TreeSeriesIterator(slab::TreeSeries *tree_series, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
+    ValueLogIterator::ValueLogIterator(slab::ValueLog *value_log, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
             : min_time_(min_time),
               max_time_(max_time),
               mid_(mid),
               sgid_(sgid),
-              tree_series_(tree_series),
+              value_log_(value_log),
               slab_array_(){
         if (min_time_ < 0) min_time_ = 0;
-        tree_series->Scan(sgid, mid, min_time, max_time, slab_array_);
-        slab_iter_ = std::unique_ptr<SlabArrayIterator>(new SlabArrayIterator(tree_series, slab_array_, min_time, max_time, sgid, mid, cache));
+        value_log->Scan(sgid, mid, min_time, max_time, slab_array_);
+        slab_iter_ = std::unique_ptr<SlabArrayIterator>(new SlabArrayIterator(value_log, slab_array_, min_time, max_time, sgid, mid, cache));
     }
 
-    TreeSeriesIterator::~TreeSeriesIterator() {
+    ValueLogIterator::~ValueLogIterator() {
         for (auto& it : slab_array_) {
             if (it.first->mem_ == false) {
-                tree_series_->FreeBufSlab(it.second);
+                value_log_->FreeBufSlab(it.second);
             }
         }
     }
 
-    bool TreeSeriesIterator::seek(int64_t t) const {
+    bool ValueLogIterator::seek(int64_t t) const {
         return slab_iter_->seek(t);
     }
 
-    std::pair<int64_t, double> TreeSeriesIterator::at() const {
+    std::pair<int64_t, double> ValueLogIterator::at() const {
         return slab_iter_->at();
     }
 
-    bool TreeSeriesIterator::next() const {
+    bool ValueLogIterator::next() const {
         return slab_iter_->next();
     }
 
@@ -479,18 +479,18 @@ namespace tsdb::querier {
      *  MemtableIterator
      * **************************************** */
 
-    MemtableIterator::MemtableIterator(slab::TreeSeries *tree_series, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
+    MemtableIterator::MemtableIterator(slab::ValueLog *value_log, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
             : min_time_(min_time),
               max_time_(max_time),
               mid_(mid),
               sgid_(sgid),
-              tree_series_(tree_series),
+              value_log_(value_log),
               slab_array_(){
         mem_iter_.reset(mem->NewIterator());
         if (min_time_ < 0) min_time_ = 0;
 
         GetSlabArray();
-        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series, slab_array_, min_time_, max_time_, sgid, mid, cache);
+        slab_iter_ = std::make_unique<SlabArrayIterator>(value_log, slab_array_, min_time_, max_time_, sgid, mid, cache);
     }
 
     MemtableIterator::~MemtableIterator() {
@@ -501,7 +501,7 @@ namespace tsdb::querier {
 
     void MemtableIterator::GetSlabArray() {
         std::string key;
-        tree_series_->EnCodeKey(&key, sgid_, mid_, min_time_);
+        value_log_->EnCodeKey(&key, sgid_, mid_, min_time_);
         leveldb::LookupKey lk(key, leveldb::kMaxSequenceNumber);
         mem_iter_->Seek(lk.internal_key());
         if (!mem_iter_->Valid()) {
@@ -516,14 +516,14 @@ namespace tsdb::querier {
         uint16_t mid;
         uint64_t sgid;
         uint64_t t;
-        tree_series_->DeCodeKey(mem_iter_->key().ToString(), sgid, mid, t);
+        value_log_->DeCodeKey(mem_iter_->key().ToString(), sgid, mid, t);
         if (sgid != sgid_ || mid != mid_) {
             mem_iter_->Next();
             if (!mem_iter_->Valid()) {
                 err_.set("error next seek 2");
                 return;
             }
-            tree_series_->DeCodeKey(mem_iter_->key().ToString(), sgid, mid, t);
+            value_log_->DeCodeKey(mem_iter_->key().ToString(), sgid, mid, t);
             if (sgid != sgid_ || mid != mid_) return;
         }
         auto sinfo = new slab::SlabInfo();
@@ -539,7 +539,7 @@ namespace tsdb::querier {
                 err_.set("error next seek 3");
                 return;
             }
-            tree_series_->DeCodeKey(mem_iter_->key().ToString(), sgid, mid, t);
+            value_log_->DeCodeKey(mem_iter_->key().ToString(), sgid, mid, t);
             if (sgid != sgid_ || mid != mid_) return;
             auto sinfo = new slab::SlabInfo();
             sinfo->source_id_[0] = sgid;
@@ -563,24 +563,24 @@ namespace tsdb::querier {
     }
 
     /* ****************************************
-     *  L0TreeSeriesIterator
+     *  L0ValueLogIterator
      * **************************************** */
 
-    L0TreeSeriesIterator::L0TreeSeriesIterator(const querier::SpanQuerier *q, uint64_t sgid, uint16_t mid, leveldb::Iterator *it, int64_t mint, int64_t maxt)
+    L0ValueLogIterator::L0ValueLogIterator(const querier::SpanQuerier *q, uint64_t sgid, uint16_t mid, leveldb::Iterator *it, int64_t mint, int64_t maxt)
             : q_(q),
-              tree_series_(q->tree_series_),
+              value_log_(q->value_log_),
               sgid_(sgid),
               mid_(mid),
               min_time_(mint),
               max_time_(maxt),
               iter_(it) {
         GetSlabArray();
-        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series_, slab_array_, min_time_, max_time_, sgid, mid);
+        slab_iter_ = std::make_unique<SlabArrayIterator>(value_log_, slab_array_, min_time_, max_time_, sgid, mid);
     }
 
-    L0TreeSeriesIterator::L0TreeSeriesIterator(const querier::SpanQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
+    L0ValueLogIterator::L0ValueLogIterator(const querier::SpanQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
             : q_(q),
-              tree_series_(q->tree_series_),
+              value_log_(q->value_log_),
               partition_(partition),
               sgid_(sgid),
               mid_(mid),
@@ -591,18 +591,18 @@ namespace tsdb::querier {
         iter_.reset(leveldb::NewMergingIterator(q_->cmp_, &list[0], list.size()));
 
         GetSlabArray();
-        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series_, slab_array_, min_time_, max_time_, sgid, mid);
+        slab_iter_ = std::make_unique<SlabArrayIterator>(value_log_, slab_array_, min_time_, max_time_, sgid, mid);
     }
 
-    L0TreeSeriesIterator::~L0TreeSeriesIterator() {
+    L0ValueLogIterator::~L0ValueLogIterator() {
         for (auto& it : slab_array_) {
             delete it.first;
         }
     }
 
-    void L0TreeSeriesIterator::GetSlabArray() {
+    void L0ValueLogIterator::GetSlabArray() {
         std::string key;
-        tree_series_->EnCodeKey(&key, sgid_, mid_, min_time_);
+        value_log_->EnCodeKey(&key, sgid_, mid_, min_time_);
         leveldb::LookupKey lk(key, leveldb::kMaxSequenceNumber);
         iter_->Seek(lk.internal_key());
         if (!iter_->Valid()) {
@@ -617,14 +617,14 @@ namespace tsdb::querier {
         uint16_t mid;
         uint64_t sgid;
         uint64_t t;
-        tree_series_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
+        value_log_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
         if (sgid != sgid_ || mid != mid_) {
             iter_->Next();
             if (!iter_->Valid()) {
                 err_.set("error next seek 2");
                 return;
             }
-            tree_series_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
+            value_log_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
             if (sgid != sgid_ || mid != mid_) return;
         }
         auto sinfo = new slab::SlabInfo();
@@ -640,7 +640,7 @@ namespace tsdb::querier {
                 err_.set("error next seek 3");
                 return;
             }
-            tree_series_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
+            value_log_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
             if (sgid != sgid_ || mid != mid_) return;
             if (t > max_time_) return;
             auto sinfo = new slab::SlabInfo();
@@ -652,25 +652,25 @@ namespace tsdb::querier {
         }
     }
 
-    bool L0TreeSeriesIterator::seek(int64_t t) const {
+    bool L0ValueLogIterator::seek(int64_t t) const {
         return slab_iter_->seek(t);
     }
 
-    std::pair<int64_t, double> L0TreeSeriesIterator::at() const {
+    std::pair<int64_t, double> L0ValueLogIterator::at() const {
         return slab_iter_->at();
     }
 
-    bool L0TreeSeriesIterator::next() const {
+    bool L0ValueLogIterator::next() const {
         return slab_iter_->next();
     }
 
     /* ****************************************
-     *  L1TreeSeriesIterator
+     *  L1ValueLogIterator
      * **************************************** */
 
-    L1TreeSeriesIterator::L1TreeSeriesIterator(const querier::SpanQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
+    L1ValueLogIterator::L1ValueLogIterator(const querier::SpanQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
             : q_(q),
-              tree_series_(q->tree_series_),
+              value_log_(q->value_log_),
               partition_(partition),
               sgid_(sgid),
               mid_(mid),
@@ -681,18 +681,18 @@ namespace tsdb::querier {
         iter_.reset(leveldb::NewMergingIterator(q_->cmp_, &list[0], list.size()));
 
         GetSlabArray();
-        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series_, slab_array_, min_time_, max_time_, sgid, mid);
+        slab_iter_ = std::make_unique<SlabArrayIterator>(value_log_, slab_array_, min_time_, max_time_, sgid, mid);
     }
 
-    L1TreeSeriesIterator::~L1TreeSeriesIterator() {
+    L1ValueLogIterator::~L1ValueLogIterator() {
         for (auto& it : slab_array_) {
             delete it.first;
         }
     }
 
-    void L1TreeSeriesIterator::GetSlabArray() {
+    void L1ValueLogIterator::GetSlabArray() {
         std::string key;
-        tree_series_->EnCodeKey(&key, sgid_, mid_, min_time_);
+        value_log_->EnCodeKey(&key, sgid_, mid_, min_time_);
         leveldb::LookupKey lk(key, leveldb::kMaxSequenceNumber);
         iter_->Seek(lk.internal_key());
         if (!iter_->Valid()) {
@@ -707,14 +707,14 @@ namespace tsdb::querier {
         uint16_t mid;
         uint64_t sgid;
         uint64_t t;
-        tree_series_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
+        value_log_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
         if (sgid != sgid_ || mid != mid_) {
             iter_->Next();
             if (!iter_->Valid()) {
                 err_.set("error next seek 2");
                 return;
             }
-            tree_series_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
+            value_log_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
             if (sgid != sgid_ || mid != mid_) return;
         }
         auto sinfo = new slab::SlabInfo();
@@ -730,7 +730,7 @@ namespace tsdb::querier {
                 err_.set("error next seek 3");
                 return;
             }
-            tree_series_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
+            value_log_->DeCodeKey(iter_->key().ToString(), sgid, mid, t);
             if (sgid != sgid_ || mid != mid_) return;
             auto sinfo = new slab::SlabInfo();
             sinfo->source_id_[0] = sgid;
@@ -741,15 +741,15 @@ namespace tsdb::querier {
         }
     }
 
-    bool L1TreeSeriesIterator::seek(int64_t t) const {
+    bool L1ValueLogIterator::seek(int64_t t) const {
         return slab_iter_->seek(t);
     }
 
-    std::pair<int64_t, double> L1TreeSeriesIterator::at() const {
+    std::pair<int64_t, double> L1ValueLogIterator::at() const {
         return slab_iter_->at();
     }
 
-    bool L1TreeSeriesIterator::next() const {
+    bool L1ValueLogIterator::next() const {
         return slab_iter_->next();
     }
 
@@ -820,7 +820,7 @@ namespace tsdb::querier {
         if (q_->min_time_ <= level_flush_time_) {
             // Add L1 iterators
             for (int i = 0; i < q_->l1_indexes_.size(); i++) {
-                iters.push_back(new L1TreeSeriesIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
+                iters.push_back(new L1ValueLogIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
             }
 
             // Add L0 iterators
@@ -829,26 +829,26 @@ namespace tsdb::querier {
                 std::vector<leveldb::Iterator*> list;
                 q_->current_->AddIterators(leveldb::ReadOptions(), 0, q_->l0_indexes_[i], &list, sgid_, mid_);
                 for (leveldb::Iterator* it : list) {
-                    mit->push_back(new L0TreeSeriesIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
+                    mit->push_back(new L0ValueLogIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
                 }
                 iters.push_back(mit);
             }
 
             // Add mem iterators
             for (int i = 0; i < q_->imms_.size(); i++) {
-                iters.push_back(new MemtableIterator(q_->tree_series_, q_->imms_[i], q_->min_time_, q_->max_time_, sgid_, mid_));
+                iters.push_back(new MemtableIterator(q_->value_log_, q_->imms_[i], q_->min_time_, q_->max_time_, sgid_, mid_));
             }
             if (q_->mem_) {
-                iters.push_back(new MemtableIterator(q_->tree_series_, q_->mem_, q_->min_time_, q_->max_time_, sgid_, mid_));
+                iters.push_back(new MemtableIterator(q_->value_log_, q_->mem_, q_->min_time_, q_->max_time_, sgid_, mid_));
             }
         }
 //        bool flag = 0;
         if (q_->max_time_ > level_flush_time_) {
-            // Add TreeSeries iterator
-            iters.push_back(new TreeSeriesIterator(q_->tree_series_, std::max(q_->min_time_,level_flush_time_), q_->max_time_, sgid_, mid_));
-//            auto slab_array = get_head_slab_array(q_->tree_series_, q_->head_, sgid_, mid_);
+            // Add ValueLog iterator
+            iters.push_back(new ValueLogIterator(q_->value_log_, std::max(q_->min_time_,level_flush_time_), q_->max_time_, sgid_, mid_));
+//            auto slab_array = get_head_slab_array(q_->value_log_, q_->head_, sgid_, mid_);
 //            if(q_->min_time_>slab_array[0].first->start_time_[0]){
-//                iters.push_back(new SlabArrayIterator(q_->tree_series_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
+//                iters.push_back(new SlabArrayIterator(q_->value_log_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
 //                flag = 1;
 //            }
         }
@@ -860,8 +860,8 @@ namespace tsdb::querier {
 
             }
 //            if(!flag){
-//                auto slab_array = get_head_slab_array(q_->tree_series_, q_->head_, sgid_, mid_);
-//                iters.push_back(new SlabArrayIterator(q_->tree_series_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
+//                auto slab_array = get_head_slab_array(q_->value_log_, q_->head_, sgid_, mid_);
+//                iters.push_back(new SlabArrayIterator(q_->value_log_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
 //            }
 
         }
@@ -881,7 +881,7 @@ namespace tsdb::querier {
         if (q_->min_time_ <= level_flush_time_) {
             // Add L1 iterators
             for (int i = 0; i < q_->l1_indexes_.size(); i++) {
-                iters.push_back(new L1TreeSeriesIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
+                iters.push_back(new L1ValueLogIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
             }
 
             // Add L0 iterators
@@ -889,25 +889,25 @@ namespace tsdb::querier {
                 std::vector<leveldb::Iterator*> list;
                 q_->current_->AddIterators(leveldb::ReadOptions(), 0, q_->l0_indexes_[i], &list, sgid_, mid_);
                 for (leveldb::Iterator* it : list) {
-                    iters.push_back(new L0TreeSeriesIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
+                    iters.push_back(new L0ValueLogIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
                 }
             }
 
             // Add mem iterators
             for (int i = 0; i < q_->imms_.size(); i++) {
-                iters.push_back(new MemtableIterator(q_->tree_series_, q_->imms_[i], q_->min_time_, q_->max_time_, sgid_, mid_));
+                iters.push_back(new MemtableIterator(q_->value_log_, q_->imms_[i], q_->min_time_, q_->max_time_, sgid_, mid_));
             }
             if (q_->mem_) {
-                iters.push_back(new MemtableIterator(q_->tree_series_, q_->mem_, q_->min_time_, q_->max_time_, sgid_, mid_));
+                iters.push_back(new MemtableIterator(q_->value_log_, q_->mem_, q_->min_time_, q_->max_time_, sgid_, mid_));
             }
         }
 //        bool flag = 0;
         if (q_->max_time_ > level_flush_time_) {
-            // Add TreeSeries iterator
-            iters.push_back(new TreeSeriesIterator(q_->tree_series_, std::max(level_flush_time_,q_->min_time_), q_->max_time_, sgid_, mid_));
-//            auto slab_array = get_head_slab_array(q_->tree_series_, q_->head_, sgid_, mid_);
+            // Add ValueLog iterator
+            iters.push_back(new ValueLogIterator(q_->value_log_, std::max(level_flush_time_,q_->min_time_), q_->max_time_, sgid_, mid_));
+//            auto slab_array = get_head_slab_array(q_->value_log_, q_->head_, sgid_, mid_);
 //            if(q_->min_time_>slab_array[0].first->start_time_[0]){
-//                iters.push_back(new SlabArrayIterator(q_->tree_series_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
+//                iters.push_back(new SlabArrayIterator(q_->value_log_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
 //                flag = 1;
 //            }
         }
@@ -918,8 +918,8 @@ namespace tsdb::querier {
                 iters.push_back(new SpanHeadIterator(head_chunk_contents_, q_->min_time_, q_->max_time_));
             }
 //            if(!flag){
-//                 auto slab_array = get_head_slab_array(q_->tree_series_, q_->head_, sgid_, mid_);
-//                 iters.push_back(new SlabArrayIterator(q_->tree_series_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
+//                 auto slab_array = get_head_slab_array(q_->value_log_, q_->head_, sgid_, mid_);
+//                 iters.push_back(new SlabArrayIterator(q_->value_log_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
 //            }
         }
 
@@ -975,10 +975,10 @@ namespace tsdb::querier {
      *  SpanQuerier
      * **************************************** */
 
-    SpanQuerier::SpanQuerier(leveldb::DB *db, head::SpanHead *head, slab::TreeSeries* tree_series, int64_t min_time, int64_t max_time, leveldb::Cache *cache)
+    SpanQuerier::SpanQuerier(leveldb::DB *db, head::SpanHead *head, slab::ValueLog* value_log, int64_t min_time, int64_t max_time, leveldb::Cache *cache)
             : db_(db),
               head_(head),
-              tree_series_(tree_series),
+              value_log_(value_log),
               need_unref_current_(true),
               min_time_(min_time),
               max_time_(max_time),

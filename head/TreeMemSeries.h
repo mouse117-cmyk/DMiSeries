@@ -9,8 +9,8 @@
 #include "disk/log_manager.h"
 #include "head/HeadUtils.hpp"
 #include "label/Label.hpp"
-#include "TreeSeries/slab_management.h"
-#include "TreeSeries/TreeSeries.h"
+#include "ValueLog/slab_management.h"
+#include "ValueLog/ValueLog.h"
 
 namespace leveldb {
 class DB;
@@ -53,7 +53,7 @@ class TreeMemSeries {
   uint16_t metric_id_;
 
   int64_t head_flush_time_; // larger timestamps are in head_chunk
-  int64_t level_flush_time_; // larger timestamps are in TreeSeries, smaller timestamps are in lsm-tree
+  int64_t level_flush_time_; // larger timestamps are in ValueLog, smaller timestamps are in lsm-tree
 
   uint64_t chunk_num_;
 
@@ -77,10 +77,10 @@ class TreeMemSeries {
   inline uint64_t encodeSMid(uint64_t sgid, uint16_t mid) {return (sgid << 9) | mid;}
   inline std::pair<uint64_t , uint16_t> decodeSMid(uint64_t logical_id) {return std::make_pair(logical_id >> 9, logical_id & 0x1ff);}
 
-  leveldb::Status _flush_mirror(slab::TreeSeries* tree_series, int64_t txn);
+  leveldb::Status _flush_mirror(slab::ValueLog* value_log, int64_t txn);
 
   leveldb::Status _flush_slab(slab::SlabManagement* slab_m, int64_t txn);
-  leveldb::Status _flush_tree(slab::TreeSeries* tree_series, int64_t txn);
+  leveldb::Status _flush_tree(slab::ValueLog* value_log, int64_t txn);
   leveldb::Status _flush(leveldb::DB* db, int64_t txn);
 
   bool append(leveldb::DB* db, int64_t timestamp, double value,
@@ -89,7 +89,7 @@ class TreeMemSeries {
   bool append_slab(slab::SlabManagement* slab_m, int64_t timestamp, double value,
                    int64_t txn = 0);
 
-  bool append(slab::TreeSeries* tree_series, int64_t timestamp, double value,
+  bool append(slab::ValueLog* value_log, int64_t timestamp, double value,
               int64_t txn = 0);
 
   void lock() { mutex_.lock(); }

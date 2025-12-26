@@ -78,10 +78,10 @@ int64_t TreeMemSeries::max_time() {
   return max_time_;
 }
 
-leveldb::Status TreeMemSeries::_flush_mirror(slab::TreeSeries *tree_series, int64_t txn) {
+leveldb::Status TreeMemSeries::_flush_mirror(slab::ValueLog *value_log, int64_t txn) {
 
     key_.clear();
-    tree_series->EnCodeKey(&key_,source_id_,metric_id_,tuple_st_);
+    value_log->EnCodeKey(&key_,source_id_,metric_id_,tuple_st_);
 
     chunk_.bstream.stream[0] = 1;
     leveldb::EncodeFixed16(
@@ -95,9 +95,9 @@ leveldb::Status TreeMemSeries::_flush_mirror(slab::TreeSeries *tree_series, int6
 
     chunk_num_++;
 
-    while(!tree_series->MirrorPutKV(sid_, source_id_, metric_id_,tuple_st_,
+    while(!value_log->MirrorPutKV(sid_, source_id_, metric_id_,tuple_st_,
                                     max_time_,(uint8_t *)(&chunk_.bstream.stream[0]), slab::CHUNK_SIZE, txn));
-//    std::cout<<sid_<<" "<<max_time_<<" "<<int (tree_series->GetMemSlabInfo(sid_)->nalloc_)<<std::endl;
+//    std::cout<<sid_<<" "<<max_time_<<" "<<int (value_log->GetMemSlabInfo(sid_)->nalloc_)<<std::endl;
 
     appender.reset();
     chunk_ = chunk::XORChunk(LEVELDB_VALUE_HEADER_SIZE);
@@ -112,14 +112,14 @@ leveldb::Status TreeMemSeries::_flush_slab(slab::SlabManagement* slab_m, int64_t
   return leveldb::Status::OK();
 }
 
-leveldb::Status TreeMemSeries::_flush_tree(slab::TreeSeries* tree_series, int64_t txn){
+leveldb::Status TreeMemSeries::_flush_tree(slab::ValueLog* value_log, int64_t txn){
 //    if (sid_ == std::numeric_limits<uint32_t>::max()) {
-//        while(!tree_series->GetMemSlabID(sid_, source_id_, metric_id_)){
+//        while(!value_log->GetMemSlabID(sid_, source_id_, metric_id_)){
 //        }
 //    }
 
   key_.clear();
-  tree_series->EnCodeKey(&key_,source_id_,metric_id_,tuple_st_);
+  value_log->EnCodeKey(&key_,source_id_,metric_id_,tuple_st_);
 
   chunk_.bstream.stream[0] = 1;
   leveldb::EncodeFixed16(
@@ -132,13 +132,13 @@ leveldb::Status TreeMemSeries::_flush_tree(slab::TreeSeries* tree_series, int64_
   };
 
   chunk_num_++;
-  while(!tree_series->ConPutKV(sid_, source_id_, metric_id_,tuple_st_,max_time_,(uint8_t *)(&chunk_.bstream.stream[0]), slab::CHUNK_SIZE, txn));
+  while(!value_log->ConPutKV(sid_, source_id_, metric_id_,tuple_st_,max_time_,(uint8_t *)(&chunk_.bstream.stream[0]), slab::CHUNK_SIZE, txn));
 //  while(!flag){
-//      tree_series->GetMemSlabID(sid_, source_id_, metric_id_);
-//      flag = tree_series->ConPutKV(sid_, source_id_, metric_id_,tuple_st_,max_time_,(uint8_t *)(&chunk_.bstream.stream[0]), slab::CHUNK_SIZE, txn);
+//      value_log->GetMemSlabID(sid_, source_id_, metric_id_);
+//      flag = value_log->ConPutKV(sid_, source_id_, metric_id_,tuple_st_,max_time_,(uint8_t *)(&chunk_.bstream.stream[0]), slab::CHUNK_SIZE, txn);
 //  }
-//  if (tree_series->SlabFull(tree_series->GetMemSlabInfo(sid_))) {
-//    while(!tree_series->GetMemSlabID(sid_, source_id_, metric_id_)){
+//  if (value_log->SlabFull(value_log->GetMemSlabInfo(sid_))) {
+//    while(!value_log->GetMemSlabID(sid_, source_id_, metric_id_)){
 //    }
 //    sid_ = std::numeric_limits<uint32_t>::max();
 //  }
@@ -242,7 +242,7 @@ bool TreeMemSeries::append_slab(slab::SlabManagement* slab_m, int64_t timestamp,
   return flushed;
 }
 
-//bool TreeMemSeries::append(slab::TreeSeries* tree_series, int64_t timestamp, double value,
+//bool TreeMemSeries::append(slab::ValueLog* value_log, int64_t timestamp, double value,
 //                       int64_t txn){
 //  bool flushed = false;
 //
@@ -257,7 +257,7 @@ bool TreeMemSeries::append_slab(slab::SlabManagement* slab_m, int64_t timestamp,
 //  appender->append(timestamp, value);
 //  int cur_end = chunk_.bstream.end;
 //  if (cur_end == slab::CHUNK_SIZE && chunk_.bstream.tail_count >= 6) {
-//    _flush_tree(tree_series, sample_txn_-num_samples_+1);
+//    _flush_tree(value_log, sample_txn_-num_samples_+1);
 //    flushed = true;
 //    head_flush_time_ = timestamp;
 //    min_time_ = std::numeric_limits<int64_t>::max();
@@ -272,7 +272,7 @@ bool TreeMemSeries::append_slab(slab::SlabManagement* slab_m, int64_t timestamp,
 //    }
 //    --num_samples_;
 //
-//    _flush_tree(tree_series, sample_txn_-num_samples_+1);
+//    _flush_tree(value_log, sample_txn_-num_samples_+1);
 //    flushed = true;
 //    head_flush_time_ = max_time_;
 //    min_time_ = std::numeric_limits<int64_t>::max();
@@ -290,7 +290,7 @@ bool TreeMemSeries::append_slab(slab::SlabManagement* slab_m, int64_t timestamp,
 //  return flushed;
 //}
 
-bool TreeMemSeries::append(slab::TreeSeries* tree_series, int64_t timestamp, double value,
+bool TreeMemSeries::append(slab::ValueLog* value_log, int64_t timestamp, double value,
                            int64_t txn){
     bool flushed = false;
 
@@ -305,7 +305,7 @@ bool TreeMemSeries::append(slab::TreeSeries* tree_series, int64_t timestamp, dou
     appender->append(timestamp, value);
     int cur_end = chunk_.bstream.end;
     if (cur_end == slab::CHUNK_SIZE && chunk_.bstream.tail_count >= 6) {
-        _flush_mirror(tree_series, sample_txn_-num_samples_+1);
+        _flush_mirror(value_log, sample_txn_-num_samples_+1);
         flushed = true;
         head_flush_time_ = timestamp;
         min_time_ = std::numeric_limits<int64_t>::max();
@@ -320,7 +320,7 @@ bool TreeMemSeries::append(slab::TreeSeries* tree_series, int64_t timestamp, dou
         }
         --num_samples_;
 
-        _flush_mirror(tree_series, sample_txn_-num_samples_+1);
+        _flush_mirror(value_log, sample_txn_-num_samples_+1);
         flushed = true;
         head_flush_time_ = max_time_;
         min_time_ = std::numeric_limits<int64_t>::max();

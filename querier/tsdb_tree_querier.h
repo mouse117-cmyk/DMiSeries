@@ -11,7 +11,7 @@
 //#include "querier/QuerierInterface.hpp"
 //#include "querier/SeriesInterface.hpp"
 //#include "querier/SeriesSetInterface.hpp"
-//#include "TreeSeries/TreeSeries.h"
+//#include "ValueLog/ValueLog.h"
 //#include "head/TreeHead.h"
 //
 //namespace tsdb{
@@ -57,7 +57,7 @@
 //        leveldb::Status s_;
 //        mutable tsdb::error::Error err_;
 //
-//        slab::TreeSeries* tree_series_;
+//        slab::ValueLog* tree_series_;
 //        mutable std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_iter_;
 //
 //        mutable std::vector<int64_t>* t_;
@@ -74,7 +74,7 @@
 //        void lookup_cached_ts(const leveldb::Slice& key, CachedSamples** samples, bool* create_ts) const;
 //
 //    public:
-//        SlabArrayIterator(slab::TreeSeries* tree_series, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
+//        SlabArrayIterator(slab::ValueLog* tree_series, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
 //        ~SlabArrayIterator();
 //        bool seek(int64_t t) const override;
 //        std::pair<int64_t, double> at() const override;
@@ -91,7 +91,7 @@
 //        void DecodeItemChunkHeader(slab::Item* item, uint16_t& mid, uint64_t& sgid, int64_t& start_time) const;
 //    };
 //
-//    class TreeSeriesIterator : public tsdb::querier::SeriesIteratorInterface {
+//    class ValueLogIterator : public tsdb::querier::SeriesIteratorInterface {
 //    private:
 //        int64_t min_time_;
 //        int64_t max_time_;
@@ -102,13 +102,13 @@
 //        leveldb::Status s_;
 //        mutable tsdb::error::Error err_;
 //
-//        slab::TreeSeries* tree_series_;
+//        slab::ValueLog* tree_series_;
 //        std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
 //        std::unique_ptr<SlabArrayIterator> slab_iter_;
 //
 //    public:
-//        TreeSeriesIterator(slab::TreeSeries* tree_series, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
-//        ~TreeSeriesIterator();
+//        ValueLogIterator(slab::ValueLog* tree_series, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
+//        ~ValueLogIterator();
 //        bool seek(int64_t t) const override;
 //        std::pair<int64_t, double> at() const override;
 //        bool next() const override;
@@ -126,14 +126,14 @@
 //        leveldb::Status s_;
 //        mutable error::Error err_;
 //
-//        slab::TreeSeries* tree_series_;
+//        slab::ValueLog* tree_series_;
 //        std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
 //        std::unique_ptr<SlabArrayIterator> slab_iter_;
 //
 //        std::unique_ptr<leveldb::Iterator> mem_iter_;
 //
 //    public:
-//        MemtableIterator(slab::TreeSeries* tree_series, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
+//        MemtableIterator(slab::ValueLog* tree_series, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
 //        ~MemtableIterator();
 //
 //        void GetSlabArray();
@@ -144,7 +144,7 @@
 //        bool error() const {return err_;}
 //    };
 //
-//    class L0TreeSeriesIterator : public querier::SeriesIteratorInterface {
+//    class L0ValueLogIterator : public querier::SeriesIteratorInterface {
 //    private:
 //        const TreeQuerier* q_;
 //        int partition_;
@@ -157,16 +157,16 @@
 //        leveldb::Status s_;
 //        mutable error::Error err_;
 //
-//        slab::TreeSeries* tree_series_;
+//        slab::ValueLog* tree_series_;
 //        std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
 //        std::unique_ptr<SlabArrayIterator> slab_iter_;
 //
 //        std::unique_ptr<leveldb::Iterator> iter_;
 //
 //    public:
-//        L0TreeSeriesIterator(const querier::TreeQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
-//        L0TreeSeriesIterator(const querier::TreeQuerier* q, uint64_t sgid, uint16_t mid, leveldb::Iterator* it, int64_t mint, int64_t maxt);
-//        ~L0TreeSeriesIterator();
+//        L0ValueLogIterator(const querier::TreeQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
+//        L0ValueLogIterator(const querier::TreeQuerier* q, uint64_t sgid, uint16_t mid, leveldb::Iterator* it, int64_t mint, int64_t maxt);
+//        ~L0ValueLogIterator();
 //
 //        void GetSlabArray();
 //
@@ -176,7 +176,7 @@
 //        bool error() const override {return err_;}
 //    };
 //
-//    class L1TreeSeriesIterator : public querier::SeriesIteratorInterface {
+//    class L1ValueLogIterator : public querier::SeriesIteratorInterface {
 //    private:
 //        const TreeQuerier* q_;
 //        int partition_;
@@ -189,15 +189,15 @@
 //        leveldb::Status s_;
 //        mutable error::Error err_;
 //
-//        slab::TreeSeries* tree_series_;
+//        slab::ValueLog* tree_series_;
 //        std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
 //        std::unique_ptr<SlabArrayIterator> slab_iter_;
 //
 //        std::unique_ptr<leveldb::Iterator> iter_;
 //
 //    public:
-//        L1TreeSeriesIterator(const querier::TreeQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
-//        ~L1TreeSeriesIterator();
+//        L1ValueLogIterator(const querier::TreeQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
+//        ~L1ValueLogIterator();
 //
 //        void GetSlabArray();
 //
@@ -241,13 +241,13 @@
 //        std::unique_ptr<querier::SeriesIteratorInterface> iterator() override;
 //        std::unique_ptr<querier::SeriesIteratorInterface> chain_iterator() override;
 //
-//        uint32_t get_sid(slab::TreeSeries* tree_series, head::TreeHead* tree_head, uint64_t sgid, uint16_t mid) {
+//        uint32_t get_sid(slab::ValueLog* tree_series, head::TreeHead* tree_head, uint64_t sgid, uint16_t mid) {
 ////            auto tms = tree_head->get_from_forward_index(sgid, mid);
 //            auto tms = tree_head->read_flat_forward_index(sgid, mid);
 //            return tms->sid_;
 //        }
 //
-//        std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> get_head_slab_array(slab::TreeSeries* tree_series, head::TreeHead* tree_head, uint64_t sgid, uint16_t mid) {
+//        std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> get_head_slab_array(slab::ValueLog* tree_series, head::TreeHead* tree_head, uint64_t sgid, uint16_t mid) {
 ////            auto tms = tree_head->get_from_forward_index(sgid, mid);
 //            auto tms = tree_head->read_flat_forward_index(sgid, mid);
 //            std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array;
@@ -291,16 +291,16 @@
 //    class TreeQuerier : public QuerierInterface {
 //    private:
 //        friend class TreeHeadIterator;
-//        friend class TreeSeriesIterator;
+//        friend class ValueLogIterator;
 //        friend class MemtableIterator;
-//        friend class L0TreeSeriesIterator;
-//        friend class L1TreeSeriesIterator;
+//        friend class L0ValueLogIterator;
+//        friend class L1ValueLogIterator;
 //        friend class TreeQuerierSeries;
 //        friend class TreeQuerierSeriesSet;
 //
 //        mutable leveldb::DB* db_;
 //        mutable tsdb::head::TreeHead* tree_head_;
-//        mutable slab::TreeSeries* tree_series_;
+//        mutable slab::ValueLog* tree_series_;
 //
 //        mutable leveldb::Version* current_;
 //        bool need_unref_current_;
@@ -324,7 +324,7 @@
 //        void register_disk_partitions();
 //
 //    public:
-//        TreeQuerier(leveldb::DB* db, head::TreeHead* tree_head, slab::TreeSeries* tree_series, int64_t min_time, int64_t max_time, leveldb::Cache* cache = nullptr);
+//        TreeQuerier(leveldb::DB* db, head::TreeHead* tree_head, slab::ValueLog* tree_series, int64_t min_time, int64_t max_time, leveldb::Cache* cache = nullptr);
 //
 //        ~TreeQuerier();
 //

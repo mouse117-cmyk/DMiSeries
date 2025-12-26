@@ -141,14 +141,14 @@ namespace tsdb::parallel_wal {
 //                    if (cnt == 0) {
 //                        continue;
 //                    }
-//                    rec_buf_ = leveldb::log::treeSeries(series_,cnt);
+//                    rec_buf_ = leveldb::log::valueLog(series_,cnt);
 //                    log_writer_->AddRecord(rec_buf_);
 //                    TryExtendLog();
 
 //                    while (series_queue_.try_pop(series_[cur_item_num_])) {
 //                        cur_item_num_++;
 //                        if (cur_item_num_ == ITEM_NUM) {
-//                            rec_buf_ = leveldb::log::treeSeries(series_,ITEM_NUM);
+//                            rec_buf_ = leveldb::log::valueLog(series_,ITEM_NUM);
 //                            log_writer_->AddRecord(rec_buf_);
 //                            TryExtendLog();
 //                            cur_item_num_ = 0;
@@ -159,7 +159,7 @@ namespace tsdb::parallel_wal {
                     while (series_queue_.try_pop(series_[cur_item_num_])) {
                         cur_item_num_++;
                         if (cur_item_num_ >= ITEM_NUM || series_queue_.was_size() == 0) {
-                            rec_buf_ = leveldb::log::treeSeries(series_, cur_item_num_);
+                            rec_buf_ = leveldb::log::valueLog(series_, cur_item_num_);
                             log_writer_->AddRecord(rec_buf_);
                             TryExtendLog();
                             cur_item_num_ = 0;
@@ -226,14 +226,14 @@ namespace tsdb::parallel_wal {
 //            if (cnt == 0) {
 //                return;
 //            }
-//            rec_buf_ = leveldb::log::treeSeries(series_,cnt);
+//            rec_buf_ = leveldb::log::valueLog(series_,cnt);
 //            log_writer_->AddRecord(rec_buf_);
 //            TryExtendLog();
 
             while (series_queue_.try_pop(series_[cur_item_num_])) {
                 cur_item_num_++;
                 if (cur_item_num_ >= ITEM_NUM || series_queue_.was_size() == 0) {
-                    rec_buf_ = leveldb::log::treeSeries(series_, cur_item_num_);
+                    rec_buf_ = leveldb::log::valueLog(series_, cur_item_num_);
                     log_writer_->AddRecord(rec_buf_);
                     TryExtendLog();
                     cur_item_num_ = 0;
@@ -261,7 +261,7 @@ namespace tsdb::parallel_wal {
 
         if (tag_log_) {
             if (cur_item_num_ > 0) {
-                rec_buf_ = leveldb::log::treeSeries(series_, cur_item_num_);
+                rec_buf_ = leveldb::log::valueLog(series_, cur_item_num_);
                 log_writer_->AddRecord(rec_buf_);
                 TryExtendLog();
                 cur_item_num_ = 0;

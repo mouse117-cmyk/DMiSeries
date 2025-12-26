@@ -4,7 +4,7 @@
 #include "base/Error.hpp"
 #include "label/Label.hpp"
 #include "leveldb/status.h"
-#include "../TreeSeries/slab_management.h"
+#include "../ValueLog/slab_management.h"
 
 namespace tsdb {
 namespace db {

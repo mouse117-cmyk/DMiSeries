@@ -4,7 +4,7 @@
 //namespace tsdb {
 //    namespace db {
 //
-//        TreeRemoteDB::TreeRemoteDB(const std::string& dir, leveldb::DB* db, head::TreeHead* tree_head, slab::TreeSeries* tree_series)
+//        TreeRemoteDB::TreeRemoteDB(const std::string& dir, leveldb::DB* db, head::TreeHead* tree_head, slab::ValueLog* tree_series)
 //                : dir_(dir),
 //                  db_(db),
 //                  tree_head_(tree_head),
@@ -48,7 +48,7 @@
 //        }
 //
 //        leveldb::Status TreeRemoteDB::setup(const std::string& dbpath, const std::string& log_path) {
-//            //=================TreeSeries==========
+//            //=================ValueLog==========
 ////                std::string  path = "/mnt/nvme/tree_series/tree_series_test";
 ////                int fd = ::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
 ////                slab::Setting *setting = new slab::Setting();
@@ -56,7 +56,7 @@
 ////                std::string info_path = "/mnt/nvme/tree_series/tree_series_info_test";
 ////                int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
 ////                setting->ssd_slab_info_ = "/mnt/nvme/tree_series/tree_series_info_test";
-////                tree_series_ = new slab::TreeSeries(*setting);
+////                tree_series_ = new slab::ValueLog(*setting);
 //
 //            std::string  path = "/home/dell/project/SSD/tree_series_test";
 //            int fd = ::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
@@ -65,7 +65,7 @@
 //            std::string info_path = "/home/dell/project/SSD/tree_series_info_test";
 //            int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
 //            setting->ssd_slab_info_ = "/home/dell/project/SSD/tree_series_info_test";
-//            tree_series_ = new slab::TreeSeries(*setting);
+//            tree_series_ = new slab::ValueLog(*setting);
 //
 //            //==========LevelDB============
 ////                std::string dbpath = "/tmp/tsdb_big";

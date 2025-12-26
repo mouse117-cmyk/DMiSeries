@@ -2,7 +2,7 @@
 #define TEMPUSCSTORE_SPANQUERIER_H
 
 #include "head/SpanHead.h"
-#include "TreeSeries/TreeSeries.h"
+#include "ValueLog/ValueLog.h"
 #include "leveldb/db.h"
 #include "leveldb/cache.h"
 #include "leveldb/slice.h"
@@ -56,7 +56,7 @@ namespace tsdb {
             leveldb::Status s_;
             mutable tsdb::error::Error err_;
 
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             mutable std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_iter_;
 
             mutable std::vector<int64_t>* t_;
@@ -73,7 +73,7 @@ namespace tsdb {
             void lookup_cached_ts(const leveldb::Slice& key, CachedSamples** samples, bool* create_ts) const;
 
         public:
-            SlabArrayIterator(slab::TreeSeries* tree_series, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
+            SlabArrayIterator(slab::ValueLog* value_log, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
             ~SlabArrayIterator();
             bool seek(int64_t t) const override;
             std::pair<int64_t, double> at() const override;
@@ -90,7 +90,7 @@ namespace tsdb {
             void DecodeItemChunkHeader(slab::Item* item, uint16_t& mid, uint64_t& sgid, int64_t& start_time) const;
         };
 
-        class TreeSeriesIterator : public tsdb::querier::SeriesIteratorInterface {
+        class ValueLogIterator : public tsdb::querier::SeriesIteratorInterface {
         private:
             int64_t min_time_;
             int64_t max_time_;
@@ -101,13 +101,13 @@ namespace tsdb {
             leveldb::Status s_;
             mutable tsdb::error::Error err_;
 
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
             std::unique_ptr<SlabArrayIterator> slab_iter_;
 
         public:
-            TreeSeriesIterator(slab::TreeSeries* tree_series, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
-            ~TreeSeriesIterator();
+            ValueLogIterator(slab::ValueLog* value_log, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
+            ~ValueLogIterator();
             bool seek(int64_t t) const override;
             std::pair<int64_t, double> at() const override;
             bool next() const override;
@@ -125,14 +125,14 @@ namespace tsdb {
             leveldb::Status s_;
             mutable error::Error err_;
 
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
             std::unique_ptr<SlabArrayIterator> slab_iter_;
 
             std::unique_ptr<leveldb::Iterator> mem_iter_;
 
         public:
-            MemtableIterator(slab::TreeSeries* tree_series, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
+            MemtableIterator(slab::ValueLog* value_log, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache* cache = nullptr);
             ~MemtableIterator();
 
             void GetSlabArray();
@@ -143,7 +143,7 @@ namespace tsdb {
             bool error() const {return err_;}
         };
 
-        class L0TreeSeriesIterator : public querier::SeriesIteratorInterface {
+        class L0ValueLogIterator : public querier::SeriesIteratorInterface {
         private:
             const SpanQuerier* q_;
             int partition_;
@@ -156,16 +156,16 @@ namespace tsdb {
             leveldb::Status s_;
             mutable error::Error err_;
 
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
             std::unique_ptr<SlabArrayIterator> slab_iter_;
 
             std::unique_ptr<leveldb::Iterator> iter_;
 
         public:
-            L0TreeSeriesIterator(const querier::SpanQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
-            L0TreeSeriesIterator(const querier::SpanQuerier* q, uint64_t sgid, uint16_t mid, leveldb::Iterator* it, int64_t mint, int64_t maxt);
-            ~L0TreeSeriesIterator();
+            L0ValueLogIterator(const querier::SpanQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
+            L0ValueLogIterator(const querier::SpanQuerier* q, uint64_t sgid, uint16_t mid, leveldb::Iterator* it, int64_t mint, int64_t maxt);
+            ~L0ValueLogIterator();
 
             void GetSlabArray();
 
@@ -175,7 +175,7 @@ namespace tsdb {
             bool error() const override {return err_;}
         };
 
-        class L1TreeSeriesIterator : public querier::SeriesIteratorInterface {
+        class L1ValueLogIterator : public querier::SeriesIteratorInterface {
         private:
             const SpanQuerier* q_;
             int partition_;
@@ -188,15 +188,15 @@ namespace tsdb {
             leveldb::Status s_;
             mutable error::Error err_;
 
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array_;
             std::unique_ptr<SlabArrayIterator> slab_iter_;
 
             std::unique_ptr<leveldb::Iterator> iter_;
 
         public:
-            L1TreeSeriesIterator(const querier::SpanQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
-            ~L1TreeSeriesIterator();
+            L1ValueLogIterator(const querier::SpanQuerier* q, int partition, uint64_t sgid,  uint16_t mid, int64_t mint, int64_t maxt);
+            ~L1ValueLogIterator();
 
             void GetSlabArray();
 
@@ -240,19 +240,19 @@ namespace tsdb {
             std::unique_ptr<querier::SeriesIteratorInterface> iterator() override;
             std::unique_ptr<querier::SeriesIteratorInterface> chain_iterator() override;
 
-            uint32_t get_sid(slab::TreeSeries* span_series, head::SpanHead* head, uint64_t sgid, uint16_t mid) {
+            uint32_t get_sid(slab::ValueLog* span_series, head::SpanHead* head, uint64_t sgid, uint16_t mid) {
                 auto tms = head->read_flat_forward_index(sgid, mid);
                 return tms->sid_;
             }
 
-            std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> get_head_slab_array(slab::TreeSeries* tree_series, head::SpanHead* head, uint64_t sgid, uint16_t mid) {
+            std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> get_head_slab_array(slab::ValueLog* value_log, head::SpanHead* head, uint64_t sgid, uint16_t mid) {
                 auto tms = head->read_flat_forward_index(sgid, mid);
                 std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array;
                 if (tms->sid_ == std::numeric_limits<uint32_t>::max())  return slab_array;
-                auto sinfo = tree_series->GetMemSlabInfo(tms->sid_);
+                auto sinfo = value_log->GetMemSlabInfo(tms->sid_);
                 slab::SlabInfo* new_sinfo = new slab::SlabInfo();
                 for(uint8_t i=0;i<sinfo->idx_;i++){
-                    if(sgid == tree_series->GetSinfoSourceID(sinfo,i)&&tree_series->GetSinfoMetricID(sinfo,i)){
+                    if(sgid == value_log->GetSinfoSourceID(sinfo,i)&&value_log->GetSinfoMetricID(sinfo,i)){
                         new_sinfo->start_time_[0] = sinfo->start_time_[i];
                         break;
                     }
@@ -261,7 +261,7 @@ namespace tsdb {
                 new_sinfo->metric_id_[0] = mid / slab::CX_NUM;
                 new_sinfo->idx_ = 1;
                 new_sinfo->nalloc_ = sinfo->nalloc_.load();
-                slab_array.emplace_back(new_sinfo, tree_series->GetMemSlab(tms->sid_));
+                slab_array.emplace_back(new_sinfo, value_log->GetMemSlab(tms->sid_));
                 return slab_array;
             }
         };
@@ -290,15 +290,15 @@ namespace tsdb {
             friend class SpanHeadIterator;
             friend class SpanSeriesIterator;
             friend class MemtableIterator;
-            friend class L0TreeSeriesIterator;
-            friend class L1TreeSeriesIterator;
+            friend class L0ValueLogIterator;
+            friend class L1ValueLogIterator;
             friend class SpanQuerierSeries;
             friend class SpanQuerierSeriesSet;
 
 
             mutable leveldb::DB* db_;
             mutable tsdb::head::SpanHead* head_;
-            mutable slab::TreeSeries* tree_series_;
+            mutable slab::ValueLog* value_log_;
 
             mutable leveldb::Version* current_;
             bool need_unref_current_;
@@ -322,7 +322,7 @@ namespace tsdb {
             void register_disk_partitions();
 
         public:
-            SpanQuerier(leveldb::DB* db, head::SpanHead* head, slab::TreeSeries* tree_series, int64_t min_time, int64_t max_time, leveldb::Cache* cache = nullptr);
+            SpanQuerier(leveldb::DB* db, head::SpanHead* head, slab::ValueLog* value_log, int64_t min_time, int64_t max_time, leveldb::Cache* cache = nullptr);
 
             ~SpanQuerier();
 

@@ -10,10 +10,10 @@ namespace tsdb::head {
     public:
         TreeHead* tree_head_;
         leveldb::DB* db_;
-        slab::TreeSeries* tree_series_;
+        slab::ValueLog* tree_series_;
 
         leveldb::Status setup() {
-            //=================TreeSeries==========
+            //=================ValueLog==========
             std::string  path = "/home/dell/project/SSD/tree_series_test";
             int fd = ::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
             slab::Setting *setting = new slab::Setting();
@@ -21,7 +21,7 @@ namespace tsdb::head {
             std::string info_path = "/home/dell/project/SSD/tree_series_info_test";
             int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
             setting->ssd_slab_info_ = "/home/dell/project/SSD/tree_series_info_test";
-            tree_series_ = new slab::TreeSeries(*setting);
+            tree_series_ = new slab::ValueLog(*setting);
 
             //==========LevelDB============
             std::string hd_path = "/tmp/tree_head_test";

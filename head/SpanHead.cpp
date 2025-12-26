@@ -32,9 +32,9 @@ namespace tsdb{
     namespace head{
 
         SpanHead::SpanHead(const std::string& dir_sep, const std::string& dir, const std::string& log_path, const std::string& snapshot_dir,
-                               slab::TreeSeries* tree_series, bool sync)
+                               slab::ValueLog* value_log, bool sync)
                            : pwal_m_(this, wal_num, log_path),log_path_(log_path),last_source_group_id_(0),last_metric_id_(0),
-                             hash_shards_(STRIPE_SIZE),inverted_index_(log_path_),dir_sep_(dir_sep),dir_(dir),tree_series_(tree_series),
+                             hash_shards_(STRIPE_SIZE),inverted_index_(log_path_),dir_sep_(dir_sep),dir_(dir),value_log_(value_log),
                              sync_api_(sync),concurrency_enabled_(false),flush_cnt_(0),flat_version_(0),
                              mem_to_disk_migration_threshold_(MEM_TO_DISK_MIGRATION_THRESHOLD),migration_enabled_(false),no_log_(false) {
 
@@ -84,7 +84,7 @@ namespace tsdb{
             leveldb::Status st = leveldb::DB::Open(options, dir_sep, &db_sep_);
             db_sep_->SetSpanHead(this);
 
-            tree_series_->SetDB(db_sep_);
+            value_log_->SetDB(db_sep_);
 
             options.max_imm_num = 3;
             options.write_buffer_size = 256 * 1024 * 1024;
@@ -215,7 +215,7 @@ namespace tsdb{
                 while (r.ReadRecord(&record, &scratch)) {
                     if (record.data()[0] == leveldb::log::kSeries) {
                         std::vector<tsdb::tsdbutil::TreeRefSeries> rs;
-                        bool success = leveldb::log::treeSeries(record, &rs);
+                        bool success = leveldb::log::valueLog(record, &rs);
                         if (!success) {
                             return leveldb::Status::Corruption("series recover_index_from_log");
                         }
@@ -347,7 +347,7 @@ namespace tsdb{
                             ms = read_flat_forward_index(r.sgid, r.mid);
                             uint8_t idx;
                             while (ms->sid_ == std::numeric_limits<uint32_t>::max()){}
-                            slab::SlabInfo* slabInfo = tree_series_->GetMemSlabInfo(ms->source_id_,ms->metric_id_,ms->sid_,idx);
+                            slab::SlabInfo* slabInfo = value_log_->GetMemSlabInfo(ms->source_id_,ms->metric_id_,ms->sid_,idx);
                             if (r.txn > slabInfo->txn_[idx]) {
                                 reserve.emplace_back(r);
                             }
@@ -515,7 +515,7 @@ namespace tsdb{
 
         std::unique_ptr<db::AppenderInterface> SpanHead::head_appender() {
             return std::unique_ptr<db::AppenderInterface>(
-                    new SpanHeadAppender(const_cast<SpanHead*>(this), tree_series_, db_));
+                    new SpanHeadAppender(const_cast<SpanHead*>(this), value_log_, db_));
         }
 
         std::unique_ptr<db::AppenderInterface> SpanHead::appender() {
@@ -1025,7 +1025,7 @@ namespace tsdb{
         leveldb::Status SpanHead::flush_db() {
             std::vector<std::pair<slab::SlabInfo*, slab::Slab*>> migrate_array;
             bool is_seq = false;
-            auto status = tree_series_->MigrateReadLazyFlush(migrate_array, is_seq);
+            auto status = value_log_->MigrateReadLazyFlush(migrate_array, is_seq);
             if(!status){
                 return leveldb::Status::OK();
             }
@@ -1033,8 +1033,8 @@ namespace tsdb{
             for(auto &it:migrate_array){
                 for(uint8_t i=0;i<it.first->idx_;i++){
                     key_.clear();
-                    uint64_t sgid = tree_series_->GetSinfoSourceID(it.first,i);
-                    uint16_t mid = tree_series_->GetSinfoMetricID(it.first,i);
+                    uint64_t sgid = value_log_->GetSinfoSourceID(it.first,i);
+                    uint16_t mid = value_log_->GetSinfoMetricID(it.first,i);
                     slab::encode_l1key(&key_, sgid, mid,it.first->end_time_[i]);
                     uint8_t sub_idx = 0;
                     for(uint8_t j=0;j<it.first->nalloc_;j++){
@@ -1060,7 +1060,7 @@ namespace tsdb{
                     tms->level_flush_time_ = it.first->end_time_[i];
                 }
                 if (!is_seq) {
-                    tree_series_->FreeBufSlab(it.second);
+                    value_log_->FreeBufSlab(it.second);
                 }
             }
             return s;
@@ -1129,7 +1129,7 @@ namespace tsdb{
                 return std::make_pair((TreeMemSeries*)series_ptr, false);
             }
             uint32_t slab_id;
-//  while(!tree_series_->GetMemSlabID(slab_id,sgid,mid)){
+//  while(!value_log_->GetMemSlabID(slab_id,sgid,mid)){
 //  }
             slab_id = std::numeric_limits<uint32_t>::max();
             TreeMemSeries* ms = new TreeMemSeries(sgid,mid,lset,slab_id);
@@ -1144,7 +1144,7 @@ namespace tsdb{
                 return std::make_pair((TreeMemSeries*)series_ptr, false);
             }
             uint32_t slab_id;
-//    while(!tree_series_->GetMemSlabID(slab_id,sgid,mid)){
+//    while(!value_log_->GetMemSlabID(slab_id,sgid,mid)){
 //    }
             slab_id = std::numeric_limits<uint32_t>::max();
             TreeMemSeries* ms = new TreeMemSeries(sgid, mid, lset, slab_id);

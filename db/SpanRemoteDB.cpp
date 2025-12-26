@@ -4,13 +4,13 @@
 namespace tsdb {
     namespace db {
 
-        SpanRemoteDB::SpanRemoteDB(const std::string& sep_db_path, const std::string& db_path, leveldb::DB* sep_db, leveldb::DB* db, head::SpanHead* head, slab::TreeSeries* tree_series)
+        SpanRemoteDB::SpanRemoteDB(const std::string& sep_db_path, const std::string& db_path, leveldb::DB* sep_db, leveldb::DB* db, head::SpanHead* head, slab::ValueLog* tree_series)
                 : sep_db_path_(sep_db_path),
                   db_path_(db_path),
                   sep_db_(sep_db),
                   db_(db),
                   head_(head),
-                  tree_series_(tree_series),
+                  value_log_(tree_series),
                   cached_querier_(nullptr),
                   pool_(4) {
             init_http_proto_server();
@@ -26,13 +26,13 @@ namespace tsdb {
             init_http_proto_server();
         }
 
-        SpanRemoteDB::SpanRemoteDB(const std::string& sep_db_path, const std::string &db_path, const std::string &log_path,int port,const std::string  & tree_series_path,const std::string  & tree_series_info_path)
+        SpanRemoteDB::SpanRemoteDB(const std::string& sep_db_path, const std::string &db_path, const std::string &log_path,int port,const std::string  & value_log_path,const std::string  & value_log_info_path)
             :
               sep_db_path_(sep_db_path),
               db_path_(db_path),
               cached_querier_(nullptr),
               pool_(4) {
-              setup(sep_db_path, db_path, log_path,tree_series_path,tree_series_info_path);
+              setup(sep_db_path, db_path, log_path,value_log_path,value_log_info_path);
               init_http_proto_server(port);
         }
 
@@ -40,7 +40,7 @@ namespace tsdb {
             delete cached_querier_;
 //            delete db_;
             delete head_;
-            // delete tree_series_;
+            // delete value_log_;
             server_.stop();
         }
 
@@ -79,43 +79,43 @@ namespace tsdb {
         }
 
         leveldb::Status SpanRemoteDB::setup(const std::string& sep_db_path, const std::string& dbpath, const std::string& log_path) {
-            //=================TreeSeries==========
-            std::string  path = "/home/dell/project/SSD/tree_series_test";
+            //=================ValueLog==========
+            std::string  path = "/home/dell/project/SSD/value_log_test";
             int fd = ::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
             slab::Setting *setting = new slab::Setting();
-            setting->ssd_device_ = "/home/dell/project/SSD/tree_series_test";
-            std::string info_path = "/home/dell/project/SSD/tree_series_info_test";
+            setting->ssd_device_ = "/home/dell/project/SSD/value_log_test";
+            std::string info_path = "/home/dell/project/SSD/value_log_info_test";
             int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
-            setting->ssd_slab_info_ = "/home/dell/project/SSD/tree_series_info_test";
-            tree_series_ = new slab::TreeSeries(*setting);
+            setting->ssd_slab_info_ = "/home/dell/project/SSD/value_log_info_test";
+            value_log_ = new slab::ValueLog(*setting);
 
             boost::filesystem::remove_all(sep_db_path);
             boost::filesystem::remove_all(dbpath);
             boost::filesystem::remove_all(log_path);
 
-            head_ = new head::SpanHead(sep_db_path, dbpath, log_path,"",tree_series_);
+            head_ = new head::SpanHead(sep_db_path, dbpath, log_path,"",value_log_);
             db_ = head_->get_second_db();
             return leveldb::Status::OK();
         }
 
-        leveldb::Status SpanRemoteDB::setup(const std::string& sep_db_path, const std::string & dbpath, const std::string  & log_path,const std::string  & tree_series_path,const std::string  & tree_series_info_path) {
-            //=================TreeSeries==========
-            std::string  path = tree_series_path;
+        leveldb::Status SpanRemoteDB::setup(const std::string& sep_db_path, const std::string & dbpath, const std::string  & log_path,const std::string  & value_log_path,const std::string  & value_log_info_path) {
+            //=================ValueLog==========
+            std::string  path = value_log_path;
             int fd = ::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
             slab::Setting *setting = new slab::Setting();
-            setting->ssd_device_ = new char[tree_series_path.length() + 1];
-            std::strcpy(setting->ssd_device_, tree_series_path.c_str());
-            std::string info_path = tree_series_info_path;
+            setting->ssd_device_ = new char[value_log_path.length() + 1];
+            std::strcpy(setting->ssd_device_, value_log_path.c_str());
+            std::string info_path = value_log_info_path;
             int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
-            setting->ssd_slab_info_ = new char[tree_series_info_path.length() + 1];
-            std::strcpy(setting->ssd_slab_info_, tree_series_info_path.c_str());
-            tree_series_ = new slab::TreeSeries(*setting);
+            setting->ssd_slab_info_ = new char[value_log_info_path.length() + 1];
+            std::strcpy(setting->ssd_slab_info_, value_log_info_path.c_str());
+            value_log_ = new slab::ValueLog(*setting);
 
             boost::filesystem::remove_all(sep_db_path);
             boost::filesystem::remove_all(dbpath);
             boost::filesystem::remove_all(log_path);
 
-            head_ = new head::SpanHead(sep_db_path, dbpath, log_path,"",tree_series_);
+            head_ = new head::SpanHead(sep_db_path, dbpath, log_path,"",value_log_);
             db_ = head_->get_second_db();
             return leveldb::Status::OK();
         }

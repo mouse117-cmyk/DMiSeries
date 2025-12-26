@@ -7,7 +7,7 @@ namespace tsdb::head{
     class SpanHeadTest : public testing::Test {
     public :
         SpanHead* head_;
-        slab::TreeSeries* tree_series_;
+        slab::ValueLog* tree_series_;
 
         void setup(const std::string& sep_db_path, const std::string& db_path, const std::string& log_path) {
 
@@ -18,7 +18,7 @@ namespace tsdb::head{
             std::string info_path = "/home/dell/project/SSD/tree_series_info_test";
             int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
             setting->ssd_slab_info_ = "/home/dell/project/SSD/tree_series_info_test";
-            tree_series_ = new slab::TreeSeries(*setting);
+            tree_series_ = new slab::ValueLog(*setting);
 
             boost::filesystem::remove_all(sep_db_path);
             boost::filesystem::remove_all(db_path);

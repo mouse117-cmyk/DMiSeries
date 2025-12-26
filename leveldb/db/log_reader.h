@@ -79,8 +79,8 @@ bool flush(const Slice& s, RefFlush* f);
 
 
 
-bool treeSeries(const Slice& s, std::vector<tsdb::tsdbutil::TreeRefSeries>* series);
-bool treeSeries(const Slice& s, tsdb::tsdbutil::TreeRefSeries* series);
+bool valueLog(const Slice& s, std::vector<tsdb::tsdbutil::TreeRefSeries>* series);
+bool valueLog(const Slice& s, tsdb::tsdbutil::TreeRefSeries* series);
 
 bool treeSamples(const Slice& s, std::vector<tsdb::tsdbutil::TreeRefSample>* samples);
 

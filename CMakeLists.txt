@@ -251,16 +251,14 @@ set(SOURCES
   #   "${CMAKE_SOURCE_DIR}/gloal_index/metric_table.h"
 
 #   ************************************ slab management ***************************************
-    "${CMAKE_SOURCE_DIR}/TreeSeries/slab.h"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/slab.cpp"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/config.h"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/config.cpp"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/slab_management.h"
-#    "${CMAKE_SOURCE_DIR}/TreeSeries/ThreadPool.h"
-#    "${CMAKE_SOURCE_DIR}/TreeSeries/setting.h"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/slab_management.cpp"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/TreeSeries.h"
-    "${CMAKE_SOURCE_DIR}/TreeSeries/TreeSeries.cpp"
+    "${CMAKE_SOURCE_DIR}/ValueLog/slab.h"
+    "${CMAKE_SOURCE_DIR}/ValueLog/slab.cpp"
+    "${CMAKE_SOURCE_DIR}/ValueLog/config.h"
+    "${CMAKE_SOURCE_DIR}/ValueLog/config.cpp"
+    "${CMAKE_SOURCE_DIR}/ValueLog/slab_management.h"
+    "${CMAKE_SOURCE_DIR}/ValueLog/slab_management.cpp"
+    "${CMAKE_SOURCE_DIR}/ValueLog/ValueLog.h"
+    "${CMAKE_SOURCE_DIR}/ValueLog/ValueLog.cpp"
     "${CMAKE_SOURCE_DIR}/protobuf/types.pb.h"
     "${CMAKE_SOURCE_DIR}/protobuf/remote.pb.h"
     "${CMAKE_SOURCE_DIR}/protobuf/types.pb.cc"
@@ -275,7 +273,7 @@ set(SOURCES
     "${CMAKE_SOURCE_DIR}/db/hpg_algorithm.cpp"
     "${CMAKE_SOURCE_DIR}/testutil/label_generator.h"
     "${CMAKE_SOURCE_DIR}/testutil/iostat.h"
-    "${CMAKE_SOURCE_DIR}/testutil/memory_usage.h"
+#    "${CMAKE_SOURCE_DIR}/testutil/memory_usage.h"
     "${CMAKE_SOURCE_DIR}/testutil/config.h"
 
     "${CMAKE_SOURCE_DIR}/querier/tsdb_tree_querier.h"
@@ -460,14 +458,12 @@ function(tsdb_test test_file)
     PRIVATE
       ${LEVELDB_PLATFORM_NAME}=1
   )
-  #if("${test_file}" STREQUAL "TreeSeries/slab_management_test.cpp")
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party)
     list(APPEND MASSTREEWRAPPER_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/_deps/src/")
     list(APPEND MASSTREEWRAPPER_LINK_OPTIONS "-pthread")
     target_include_directories("${test_target_name}" PUBLIC "${MASSTREEWRAPPER_INCLUDE_DIRECTORIES}")
     target_link_libraries("${test_target_name}"  masstree)
     target_link_options("${test_target_name}" PUBLIC "${MASSTREEWRAPPER_LINK_OPTIONS}")
- # endif()
   add_test(NAME "${test_target_name}" COMMAND "${test_target_name}")
 endfunction(tsdb_test)
 tsdb_test("chunk/chunk_test.cc")
@@ -494,21 +490,22 @@ tsdb_test("third_party/art_optlock_epoch_test.cc")
 tsdb_test("third_party/persistent_cedarpp_test.cc")
 tsdb_test("third_party/lfqueue_test.cc")
 
-tsdb_test("TreeSeries/slab_management_test.cpp")
-tsdb_test("TreeSeries/tree_series_test.cpp")
+tsdb_test("ValueLog/slab_management_test.cpp")
+tsdb_test("ValueLog/value_log_test.cpp")
 tsdb_test("mem/indirection_mapping_test.cpp")
 tsdb_test("head/head_test2.cpp")
 tsdb_test("head/tree_head_test.cpp")
 tsdb_test("head/SpanHeadTest.cpp")
 tsdb_test("db/RemoteStorage.cpp")
 tsdb_test("db/DMiSeries_test.cpp")
+tsdb_test("db/db_test.cpp")
 tsdb_test("parallel_wal/parallel_wal_test.cpp")
 
 tsdb_test("head/tree_head_query_test.cpp")
 tsdb_test("querier/tsdb_tree_querier_test.cpp")
 tsdb_test("querier/SpanQuerierTest.cpp")
 tsdb_test("testutil/label_generator_test.cpp")
-tsdb_test("testutil/memory_usage_test.cpp")
+#tsdb_test("testutil/memory_usage_test.cpp")
 tsdb_test("testutil/config_test.cpp")
 
 target_link_libraries(config_test yaml-cpp)

@@ -18,7 +18,7 @@
 #include "tsdbutil/RecordEncoder.hpp"
 #include "tsdbutil/tsdbutils.hpp"
 #include "TreeMemSeries.h"
-#include "TreeSeries/TreeSeries.h"
+#include "ValueLog/ValueLog.h"
 
 namespace tsdb {
     namespace head {
@@ -26,7 +26,7 @@ namespace tsdb {
         class SpanHeadAppender : public db::AppenderInterface {
         private:
             SpanHead* ts_head_;
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* tree_series_;
             leveldb::DB* db_;
             int64_t min_time_;
             int64_t max_time_;
@@ -37,7 +37,7 @@ namespace tsdb {
             std::string rec_buf;
 
         public:
-            SpanHeadAppender(SpanHead* head, slab::TreeSeries *tree_series, leveldb::DB* db) : ts_head_(head),
+            SpanHeadAppender(SpanHead* head, slab::ValueLog *tree_series, leveldb::DB* db) : ts_head_(head),
                                                                                                tree_series_(tree_series), db_(db) {}
 
             //mock

@@ -107,11 +107,11 @@ void treeSamples(const std::vector<tsdb::tsdbutil::TreeRefSample*>& samples, std
 std::string treeSamples(const std::vector<tsdb::tsdbutil::TreeRefSample>& samples);
 void treeSamples(const std::vector<tsdb::tsdbutil::TreeRefSample>& samples, std::string* buf);
 
-std::string treeSeries(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series);
-std::string treeSeries(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size);
-void treeSeries(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size, std::string* buf);
-void treeSeries(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series, std::string* buf);
-void treeSeries(const tsdb::tsdbutil::TreeRefSeries& series, std::string* buf);
+std::string valueLog(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series);
+std::string valueLog(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size);
+void valueLog(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size, std::string* buf);
+void valueLog(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series, std::string* buf);
+void valueLog(const tsdb::tsdbutil::TreeRefSeries& series, std::string* buf);
 void tree_series_without_label(uint16_t mid, uint64_t sgid, int64_t flushed_txn, int64_t log_clean_txn, std::string* buf);
 void tree_series_without_label(const tsdb::tsdbutil::TreeRefSeries& series, std::string* buf);
 

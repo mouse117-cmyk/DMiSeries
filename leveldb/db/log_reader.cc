@@ -263,7 +263,7 @@ bool flush(const Slice& s, RefFlush* f) {
   return true;
 }
 
-bool treeSeries(const Slice& s, std::vector<tsdb::tsdbutil::TreeRefSeries>* v) {
+bool valueLog(const Slice& s, std::vector<tsdb::tsdbutil::TreeRefSeries>* v) {
     if (s.data()[0] != kSeries) return false;
     int i = 1;
     uint32_t size;
@@ -300,7 +300,7 @@ bool treeSeries(const Slice& s, std::vector<tsdb::tsdbutil::TreeRefSeries>* v) {
     return true;
 }
 
-bool treeSeries(const Slice& s, tsdb::tsdbutil::TreeRefSeries* rs) {
+bool valueLog(const Slice& s, tsdb::tsdbutil::TreeRefSeries* rs) {
     if (s.data()[0] != kSeries) return false;
     int i = 1;
     uint32_t size;

@@ -27,7 +27,7 @@
 #include "third_party/thmap/thmap.h"
 #include "tsdbutil/tsdbutils.hpp"
 #include "parallel_wal/free_lock_wal.h"
-#include "TreeSeries/TreeSeries.h"
+#include "ValueLog/ValueLog.h"
 #include "TreeMemSeries.h"
 #include "index/ThmapPostings.h"
 #include "parallel_wal/parallel_wal_span.h"
@@ -90,7 +90,7 @@ namespace tsdb{
             leveldb::DB* db_;
 
             //update in-place
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
 
             bool sync_api_;
             bool no_log_;
@@ -122,9 +122,9 @@ namespace tsdb{
         public:
 
             SpanHead(const std::string& dir_sep, const std::string& dir, const std::string& log_path, const std::string& snapshot_dir = "",
-                       slab::TreeSeries* tree_series = nullptr, bool sync = false);
+                       slab::ValueLog* value_log = nullptr, bool sync = false);
 
-            slab::TreeSeries* get_tree_series() {return tree_series_;}
+            slab::ValueLog* get_value_log() {return value_log_;}
             leveldb::DB* get_first_db() { return db_sep_; }
             leveldb::DB* get_second_db() { return db_; }
 
@@ -218,18 +218,18 @@ namespace tsdb{
 
             void bg_flush_data(){
                 bg_flush_.store(true);
-                std::thread bg_flush_tree_series([this]() {
+                std::thread bg_flush_value_log([this]() {
                     sleep(1);
                     MasstreeWrapper<slab::SlabInfo>::ti=threadinfo::make(threadinfo::TI_PROCESS, 1000);
                     while (bg_flush_) {
                         sleep(0.5);
-                        while(bg_flush_&&(tree_series_->GetFullMemSlabNum() > tree_series_ -> GetBatchWriteNum())){
-                            tree_series_->OptBatchWriteLazyFlush();
-                            //tree_series_->OptBatchWrite();
+                        while(bg_flush_&&(value_log_->GetFullMemSlabNum() > value_log_ -> GetBatchWriteNum())){
+                            value_log_->OptBatchWriteLazyFlush();
+                            //value_log_->OptBatchWrite();
                             flush_cnt_++;
 //                            std::cout<<"+++++++++++++++++++++++++++++++++++++++++[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["<<std::endl;
-//                            std::cout<<tree_series_->GetDB()->mem()->ApproximateMemoryUsage()<<std::endl;
-//                            auto iter = tree_series_->GetDB()->mem()->NewIterator();
+//                            std::cout<<value_log_->GetDB()->mem()->ApproximateMemoryUsage()<<std::endl;
+//                            auto iter = value_log_->GetDB()->mem()->NewIterator();
 //                            iter->SeekToFirst();
 //                            uint64_t cnt = 0;
 //                            while (iter->Valid()) {
@@ -249,12 +249,12 @@ namespace tsdb{
                     MasstreeWrapper<slab::SlabInfo>::ti=threadinfo::make(threadinfo::TI_PROCESS, 1000);
                     while (bg_flush_) {
                         sleep(0.5);
-                        while (bg_flush_&&(tree_series_->GetUsedDiskSlabNum() > tree_series_ -> GetMigrateNum())){
+                        while (bg_flush_&&(value_log_->GetUsedDiskSlabNum() > value_log_ -> GetMigrateNum())){
                             flush_db();
                         }
                     }
                 });
-                bg_flush_tree_series.detach();
+                bg_flush_value_log.detach();
                 bg_flush_db.detach();
             }
 

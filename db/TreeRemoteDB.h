@@ -7,7 +7,7 @@
 #include "third_party/httplib.h"
 #include "protobuf/types.pb.h"
 #include "protobuf/remote.pb.h"
-//#include "TreeSeries/ThreadPool.h"
+//#include "ValueLog/ThreadPool.h"
 
 namespace tsdb {
     namespace db {
@@ -17,7 +17,7 @@ namespace tsdb {
             std::string dir_;
             leveldb::DB *db_;
             head::TreeHead* tree_head_;
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             httplib::Server server_;
             error::Error err_;
 
@@ -36,14 +36,14 @@ namespace tsdb {
             void HandleQuery(const httplib::Request &req, httplib::Response &resp);
 
         public:
-            TreeRemoteDB(const std::string &dir, leveldb::DB *db, head::TreeHead *tree_head, slab::TreeSeries * tree_series);
+            TreeRemoteDB(const std::string &dir, leveldb::DB *db, head::TreeHead *tree_head, slab::ValueLog * tree_series);
             TreeRemoteDB(const std::string &dir, const std::string &log_path);
 
             std::string dir() { return dir_; }
 
             head::TreeHead *head() { return tree_head_; }
             leveldb::DB* db() { return db_; }
-            slab::TreeSeries* tree_series() { return tree_series_; }
+            slab::ValueLog* tree_series() { return value_log_; }
 
             error::Error error() { return err_; }
 
@@ -52,7 +52,7 @@ namespace tsdb {
             }
 
             querier::TreeQuerier *querier(int64_t mint, int64_t maxt) {
-                querier::TreeQuerier *q = new querier::TreeQuerier(db_, tree_head_, tree_series_, mint, maxt);
+                querier::TreeQuerier *q = new querier::TreeQuerier(db_, tree_head_, value_log_, mint, maxt);
                 return q;
             }
 

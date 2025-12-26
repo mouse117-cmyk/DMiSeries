@@ -8,7 +8,7 @@
 #include "protobuf/types.pb.h"
 #include "protobuf/remote.pb.h"
 #include <snappy.h>
-//#include "TreeSeries/ThreadPool.h"
+//#include "ValueLog/ThreadPool.h"
 
 namespace tsdb {
     namespace db {
@@ -20,7 +20,7 @@ namespace tsdb {
             leveldb::DB *sep_db_;
             leveldb::DB *db_;
             head::SpanHead* head_;
-            slab::TreeSeries* tree_series_;
+            slab::ValueLog* value_log_;
             httplib::Server server_;
             error::Error err_;
 
@@ -33,7 +33,7 @@ namespace tsdb {
             void init_http_proto_server(int port);
 
             leveldb::Status setup(const std::string& sep_db_path, const std::string & dir, const std::string  & log_path);
-            leveldb::Status setup(const std::string& sep_db_path, const std::string & dir, const std::string  & log_path,const std::string  & tree_series_path,const std::string  & tree_series_info_path);
+            leveldb::Status setup(const std::string& sep_db_path, const std::string & dir, const std::string  & log_path,const std::string  & value_log_path,const std::string  & value_log_info_path);
 
             void multi_add(db::AppenderInterface* appender, prometheus::WriteRequest* writeRequest, uint64_t left, uint64_t right, base::WaitGroup* _wg);
             void HandleInsert(const httplib::Request &req, httplib::Response &resp);
@@ -41,9 +41,9 @@ namespace tsdb {
             void HandleQuery(const httplib::Request &req, httplib::Response &resp);
 
         public:
-            SpanRemoteDB(const std::string& sep_db_path, const std::string &dir, leveldb::DB *sep_db, leveldb::DB *db, head::SpanHead *head, slab::TreeSeries * tree_series);
+            SpanRemoteDB(const std::string& sep_db_path, const std::string &dir, leveldb::DB *sep_db, leveldb::DB *db, head::SpanHead *head, slab::ValueLog * tree_series);
             SpanRemoteDB(const std::string& sep_db_path, const std::string &dir, const std::string &log_path);
-            SpanRemoteDB(const std::string& sep_db_path, const std::string &dir, const std::string &log_path,int port,const std::string  & tree_series_path,const std::string  & tree_series_info_path);
+            SpanRemoteDB(const std::string& sep_db_path, const std::string &dir, const std::string &log_path,int port,const std::string  & value_log_path,const std::string  & value_log_info_path);
 
             std::string sep_dir() {return sep_db_path_; }
             std::string dir() { return db_path_; }
@@ -51,7 +51,7 @@ namespace tsdb {
             head::SpanHead *head() { return head_; }
             leveldb::DB* sep_db() { return sep_db_; }
             leveldb::DB* db() { return db_; }
-            slab::TreeSeries* tree_series() { return tree_series_; }
+            slab::ValueLog* tree_series() { return value_log_; }
 
             error::Error error() { return err_; }
 
@@ -60,7 +60,7 @@ namespace tsdb {
             }
 
             querier::SpanQuerier *querier(int64_t mint, int64_t maxt) {
-                querier::SpanQuerier *q = new querier::SpanQuerier(db_, head_, tree_series_, mint, maxt);
+                querier::SpanQuerier *q = new querier::SpanQuerier(db_, head_, value_log_, mint, maxt);
                 return q;
             }
 

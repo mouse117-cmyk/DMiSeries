@@ -21,7 +21,7 @@
 #include "third_party/thread_pool.h"
 #include "tsdbutil/tsdbutils.hpp"
 #include "wal/WAL.hpp"
-#include "TreeSeries/TreeSeries.h"
+#include "ValueLog/ValueLog.h"
 
 namespace tsdb::parallel_wal {
     std::vector<std::vector<std::string>> devops(
@@ -93,7 +93,7 @@ namespace tsdb::parallel_wal {
     class ParallelWalTest : public testing::Test {
     public:
         leveldb::Status setup() {
-            //=================TreeSeries==========
+            //=================ValueLog==========
             std::string  path = "/home/dell/project/SSD/parallel_wal_test";
             int fd = ::open(path.c_str(), O_WRONLY | O_CREAT, 0644);
             slab::Setting *setting = new slab::Setting();
@@ -101,7 +101,7 @@ namespace tsdb::parallel_wal {
             std::string info_path = "/home/dell/project/SSD/parallel_wal_info_test";
             int info_fd = ::open(info_path.c_str(), O_WRONLY | O_CREAT, 0644);
             setting->ssd_slab_info_ = "/home/dell/project/SSD/parallel_wal_info_test";
-            tree_series_ = new slab::TreeSeries(*setting);
+            tree_series_ = new slab::ValueLog(*setting);
 
             //==========LevelDB============
             std::string hd_path = "/tmp/parallel_wal_test";
@@ -246,7 +246,7 @@ namespace tsdb::parallel_wal {
             wg.wait();
         }
 
-        slab::TreeSeries* tree_series_;
+        slab::ValueLog* tree_series_;
         leveldb::DB* db_;
         head::TreeHead* hd_;
         bool release_labels;
@@ -303,7 +303,7 @@ namespace tsdb::parallel_wal {
         while (r.ReadRecord(&record, &scratch)) {
          if (record.data()[0] == leveldb::log::kSeries) {
              std::vector<tsdb::tsdbutil::TreeRefSeries> rs;
-             bool success = leveldb::log::treeSeries(record, &rs);
+             bool success = leveldb::log::ValueLog(record, &rs);
              if (!success) {
                  std::cout<<"fail"<<std::endl;
              }

@@ -27,7 +27,7 @@
 #include "third_party/thmap/thmap.h"
 #include "tsdbutil/tsdbutils.hpp"
 #include "parallel_wal/free_lock_wal.h"
-#include "TreeSeries/TreeSeries.h"
+#include "ValueLog/ValueLog.h"
 #include "TreeMemSeries.h"
 #include "index/ThmapPostings.h"
 #include "parallel_wal/parallel_wal.h"
@@ -104,7 +104,7 @@ class TreeHead {
   std::string dir_;
   leveldb::DB* db_;
   //update in-place
-  slab::TreeSeries* tree_series_;
+  slab::ValueLog* value_log_;
 
   bool sync_api_;
   bool no_log_;
@@ -135,12 +135,12 @@ class TreeHead {
 
  public:
   TreeHead(const std::string& dir, const std::string& snapshot_dir = "",
-       leveldb::DB* db = nullptr,slab::TreeSeries* tree_series = nullptr, bool sync = false);
+       leveldb::DB* db = nullptr,slab::ValueLog* value_log = nullptr, bool sync = false);
 
     TreeHead(const std::string& dir, const std::string& log_path, const std::string& snapshot_dir = "",
-             leveldb::DB* db = nullptr,slab::TreeSeries* tree_series = nullptr, bool sync = false);
+             leveldb::DB* db = nullptr,slab::ValueLog* value_log = nullptr, bool sync = false);
 
-  slab::TreeSeries* get_tree_series() {return tree_series_;}
+  slab::ValueLog* get_value_log() {return value_log_;}
 
   uint64_t migrate_inverted_index (double percent) { return inverted_index_.migrate(percent); }
 
@@ -232,14 +232,14 @@ class TreeHead {
 
   void bg_flush_data(){
       bg_flush_.store(true);
-      std::thread bg_flush_tree_series([this]() {
+      std::thread bg_flush_value_log([this]() {
           sleep(1);
           MasstreeWrapper<slab::SlabInfo>::ti=threadinfo::make(threadinfo::TI_PROCESS, 1000);
           while (bg_flush_) {
               sleep(0.5);
-              while(bg_flush_&&(tree_series_->GetFullMemSlabNum() > tree_series_ -> GetBatchWriteNum())){
-                  tree_series_->OptBatchWriteLazyFlush();
-                  //tree_series_->OptBatchWrite();
+              while(bg_flush_&&(value_log_->GetFullMemSlabNum() > value_log_ -> GetBatchWriteNum())){
+                  value_log_->OptBatchWriteLazyFlush();
+                  //value_log_->OptBatchWrite();
                   flush_cnt_++;
 //                  if (flush_cnt_ % 5 == 0 && (last_metric_id_-migrate_mid_)*(last_source_group_id_-migrate_sgid_) > 10000) {
 //                      migrate_to_flat_forward_index(last_source_group_id_, last_metric_id_);
@@ -252,12 +252,12 @@ class TreeHead {
           MasstreeWrapper<slab::SlabInfo>::ti=threadinfo::make(threadinfo::TI_PROCESS, 1000);
           while (bg_flush_) {
               sleep(0.5);
-              while (bg_flush_&&(tree_series_->GetUsedDiskSlabNum() > tree_series_ -> GetMigrateNum())){
+              while (bg_flush_&&(value_log_->GetUsedDiskSlabNum() > value_log_ -> GetMigrateNum())){
                   flush_db();
               }
           }
       });
-      bg_flush_tree_series.detach();
+      bg_flush_value_log.detach();
       bg_flush_db.detach();
   }
 

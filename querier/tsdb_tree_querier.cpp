@@ -110,7 +110,7 @@
 //     *  SlabArrayIterator
 //     * **************************************** */
 //
-//    SlabArrayIterator::SlabArrayIterator(slab::TreeSeries *tree_series, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
+//    SlabArrayIterator::SlabArrayIterator(slab::ValueLog *tree_series, std::vector<std::pair<const slab::SlabInfo*, slab::Slab*>> slab_array, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
 //            : slab_iter_(slab_array),
 //              min_time_(min_time),
 //              max_time_(max_time),
@@ -437,10 +437,10 @@
 //   }
 //
 //    /* ****************************************
-//     *  TreeSeriesIterator
+//     *  ValueLogIterator
 //     * **************************************** */
 //
-//    TreeSeriesIterator::TreeSeriesIterator(slab::TreeSeries *tree_series, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
+//    ValueLogIterator::ValueLogIterator(slab::ValueLog *tree_series, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
 //        : min_time_(min_time),
 //          max_time_(max_time),
 //          mid_(mid),
@@ -452,7 +452,7 @@
 //        slab_iter_ = std::unique_ptr<SlabArrayIterator>(new SlabArrayIterator(tree_series, slab_array_, min_time, max_time, sgid, mid, cache));
 //    }
 //
-//    TreeSeriesIterator::~TreeSeriesIterator() {
+//    ValueLogIterator::~ValueLogIterator() {
 //        for (auto& it : slab_array_) {
 //            if (it.first->mem_ == false) {
 //                tree_series_->FreeBufSlab(it.second);
@@ -460,15 +460,15 @@
 //        }
 //    }
 //
-//    bool TreeSeriesIterator::seek(int64_t t) const {
+//    bool ValueLogIterator::seek(int64_t t) const {
 //        return slab_iter_->seek(t);
 //    }
 //
-//    std::pair<int64_t, double> TreeSeriesIterator::at() const {
+//    std::pair<int64_t, double> ValueLogIterator::at() const {
 //        return slab_iter_->at();
 //    }
 //
-//    bool TreeSeriesIterator::next() const {
+//    bool ValueLogIterator::next() const {
 //        return slab_iter_->next();
 //    }
 //
@@ -476,7 +476,7 @@
 //     *  MemtableIterator
 //     * **************************************** */
 //
-//    MemtableIterator::MemtableIterator(slab::TreeSeries *tree_series, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
+//    MemtableIterator::MemtableIterator(slab::ValueLog *tree_series, leveldb::MemTable* mem, int64_t min_time, int64_t max_time, uint64_t sgid, uint16_t mid, leveldb::Cache *cache)
 //            : min_time_(min_time),
 //              max_time_(max_time),
 //              mid_(mid),
@@ -560,10 +560,10 @@
 //    }
 //
 //    /* ****************************************
-//     *  L0TreeSeriesIterator
+//     *  L0ValueLogIterator
 //     * **************************************** */
 //
-//    L0TreeSeriesIterator::L0TreeSeriesIterator(const querier::TreeQuerier *q, uint64_t sgid, uint16_t mid, leveldb::Iterator *it, int64_t mint, int64_t maxt)
+//    L0ValueLogIterator::L0ValueLogIterator(const querier::TreeQuerier *q, uint64_t sgid, uint16_t mid, leveldb::Iterator *it, int64_t mint, int64_t maxt)
 //        : q_(q),
 //          tree_series_(q->tree_series_),
 //          sgid_(sgid),
@@ -575,7 +575,7 @@
 //        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series_, slab_array_, min_time_, max_time_, sgid, mid);
 //    }
 //
-//    L0TreeSeriesIterator::L0TreeSeriesIterator(const querier::TreeQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
+//    L0ValueLogIterator::L0ValueLogIterator(const querier::TreeQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
 //        : q_(q),
 //          tree_series_(q->tree_series_),
 //          partition_(partition),
@@ -591,13 +591,13 @@
 //        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series_, slab_array_, min_time_, max_time_, sgid, mid);
 //    }
 //
-//    L0TreeSeriesIterator::~L0TreeSeriesIterator() {
+//    L0ValueLogIterator::~L0ValueLogIterator() {
 //        for (auto& it : slab_array_) {
 //            delete it.first;
 //        }
 //    }
 //
-//    void L0TreeSeriesIterator::GetSlabArray() {
+//    void L0ValueLogIterator::GetSlabArray() {
 //        std::string key;
 //        tree_series_->EnCodeKey(&key, sgid_, mid_, min_time_);
 //        leveldb::LookupKey lk(key, leveldb::kMaxSequenceNumber);
@@ -649,23 +649,23 @@
 //        }
 //    }
 //
-//    bool L0TreeSeriesIterator::seek(int64_t t) const {
+//    bool L0ValueLogIterator::seek(int64_t t) const {
 //        return slab_iter_->seek(t);
 //    }
 //
-//    std::pair<int64_t, double> L0TreeSeriesIterator::at() const {
+//    std::pair<int64_t, double> L0ValueLogIterator::at() const {
 //        return slab_iter_->at();
 //    }
 //
-//    bool L0TreeSeriesIterator::next() const {
+//    bool L0ValueLogIterator::next() const {
 //        return slab_iter_->next();
 //    }
 //
 //    /* ****************************************
-//     *  L1TreeSeriesIterator
+//     *  L1ValueLogIterator
 //     * **************************************** */
 //
-//    L1TreeSeriesIterator::L1TreeSeriesIterator(const querier::TreeQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
+//    L1ValueLogIterator::L1ValueLogIterator(const querier::TreeQuerier *q, int partition, uint64_t sgid, uint16_t mid, int64_t mint, int64_t maxt)
 //            : q_(q),
 //              tree_series_(q->tree_series_),
 //              partition_(partition),
@@ -681,13 +681,13 @@
 //        slab_iter_ = std::make_unique<SlabArrayIterator>(tree_series_, slab_array_, min_time_, max_time_, sgid, mid);
 //    }
 //
-//    L1TreeSeriesIterator::~L1TreeSeriesIterator() {
+//    L1ValueLogIterator::~L1ValueLogIterator() {
 //        for (auto& it : slab_array_) {
 //            delete it.first;
 //        }
 //    }
 //
-//    void L1TreeSeriesIterator::GetSlabArray() {
+//    void L1ValueLogIterator::GetSlabArray() {
 //        std::string key;
 //        tree_series_->EnCodeKey(&key, sgid_, mid_, min_time_);
 //        leveldb::LookupKey lk(key, leveldb::kMaxSequenceNumber);
@@ -738,15 +738,15 @@
 //        }
 //    }
 //
-//    bool L1TreeSeriesIterator::seek(int64_t t) const {
+//    bool L1ValueLogIterator::seek(int64_t t) const {
 //        return slab_iter_->seek(t);
 //    }
 //
-//    std::pair<int64_t, double> L1TreeSeriesIterator::at() const {
+//    std::pair<int64_t, double> L1ValueLogIterator::at() const {
 //        return slab_iter_->at();
 //    }
 //
-//    bool L1TreeSeriesIterator::next() const {
+//    bool L1ValueLogIterator::next() const {
 //        return slab_iter_->next();
 //    }
 //
@@ -817,7 +817,7 @@
 //        if (q_->min_time_ <= level_flush_time_) {
 //            // Add L1 iterators
 //            for (int i = 0; i < q_->l1_indexes_.size(); i++) {
-//                iters.push_back(new L1TreeSeriesIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
+//                iters.push_back(new L1ValueLogIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
 //            }
 //
 //            // Add L0 iterators
@@ -826,7 +826,7 @@
 //                std::vector<leveldb::Iterator*> list;
 //                q_->current_->AddIterators(leveldb::ReadOptions(), 0, q_->l0_indexes_[i], &list, sgid_, mid_);
 //                for (leveldb::Iterator* it : list) {
-//                    mit->push_back(new L0TreeSeriesIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
+//                    mit->push_back(new L0ValueLogIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
 //                }
 //                iters.push_back(mit);
 //            }
@@ -841,8 +841,8 @@
 //        }
 ////        bool flag = 0;
 //        if (q_->max_time_ > level_flush_time_) {
-//            // Add TreeSeries iterator
-//            iters.push_back(new TreeSeriesIterator(q_->tree_series_, std::max(q_->min_time_,level_flush_time_), q_->max_time_, sgid_, mid_));
+//            // Add ValueLog iterator
+//            iters.push_back(new ValueLogIterator(q_->tree_series_, std::max(q_->min_time_,level_flush_time_), q_->max_time_, sgid_, mid_));
 ////            auto slab_array = get_head_slab_array(q_->tree_series_, q_->tree_head_, sgid_, mid_);
 ////            if(q_->min_time_>slab_array[0].first->start_time_[0]){
 ////                iters.push_back(new SlabArrayIterator(q_->tree_series_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
@@ -878,7 +878,7 @@
 //        if (q_->min_time_ <= level_flush_time_) {
 //            // Add L1 iterators
 //            for (int i = 0; i < q_->l1_indexes_.size(); i++) {
-//                iters.push_back(new L1TreeSeriesIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
+//                iters.push_back(new L1ValueLogIterator(q_, i, sgid_, mid_, q_->min_time_, q_->max_time_));
 //            }
 //
 //            // Add L0 iterators
@@ -886,7 +886,7 @@
 //                std::vector<leveldb::Iterator*> list;
 //                q_->current_->AddIterators(leveldb::ReadOptions(), 0, q_->l0_indexes_[i], &list, sgid_, mid_);
 //                for (leveldb::Iterator* it : list) {
-//                    iters.push_back(new L0TreeSeriesIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
+//                    iters.push_back(new L0ValueLogIterator(q_, sgid_, mid_, it, q_->min_time_, q_->max_time_));
 //                }
 //            }
 //
@@ -900,8 +900,8 @@
 //        }
 ////        bool flag = 0;
 //        if (q_->max_time_ > level_flush_time_) {
-//            // Add TreeSeries iterator
-//            iters.push_back(new TreeSeriesIterator(q_->tree_series_, std::max(level_flush_time_,q_->min_time_), q_->max_time_, sgid_, mid_));
+//            // Add ValueLog iterator
+//            iters.push_back(new ValueLogIterator(q_->tree_series_, std::max(level_flush_time_,q_->min_time_), q_->max_time_, sgid_, mid_));
 ////            auto slab_array = get_head_slab_array(q_->tree_series_, q_->tree_head_, sgid_, mid_);
 ////            if(q_->min_time_>slab_array[0].first->start_time_[0]){
 ////                iters.push_back(new SlabArrayIterator(q_->tree_series_, slab_array, q_->min_time_, q_->max_time_, sgid_, mid_));
@@ -972,7 +972,7 @@
 //     *  TreeQuerier
 //     * **************************************** */
 //
-//    TreeQuerier::TreeQuerier(leveldb::DB *db, head::TreeHead *tree_head, slab::TreeSeries* tree_series, int64_t min_time, int64_t max_time, leveldb::Cache *cache)
+//    TreeQuerier::TreeQuerier(leveldb::DB *db, head::TreeHead *tree_head, slab::ValueLog* tree_series, int64_t min_time, int64_t max_time, leveldb::Cache *cache)
 //        : db_(db),
 //          tree_head_(tree_head),
 //          tree_series_(tree_series),

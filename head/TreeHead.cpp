@@ -87,7 +87,7 @@ void index_int_decr_helper(mem::art_tree* tree, const std::string& key) {
 }
 
 TreeHead::TreeHead(const std::string& dir, const std::string& snapshot_dir,
-               leveldb::DB* db,slab::TreeSeries* tree_series, bool sync): pwal_m_(this, wal_num, dir),log_path_(dir),last_source_group_id_(0),last_metric_id_(0),hash_shards_(STRIPE_SIZE),inverted_index_(log_path_),dir_(dir),db_(db),tree_series_(tree_series),sync_api_(sync),concurrency_enabled_(false),flush_cnt_(0),flat_version_(0),
+               leveldb::DB* db,slab::ValueLog* value_log, bool sync): pwal_m_(this, wal_num, dir),log_path_(dir),last_source_group_id_(0),last_metric_id_(0),hash_shards_(STRIPE_SIZE),inverted_index_(log_path_),dir_(dir),db_(db),value_log_(value_log),sync_api_(sync),concurrency_enabled_(false),flush_cnt_(0),flat_version_(0),
                                              mem_to_disk_migration_threshold_(MEM_TO_DISK_MIGRATION_THRESHOLD),
                                              migration_enabled_(false),
                                              no_log_(false) {
@@ -151,7 +151,7 @@ TreeHead::TreeHead(const std::string& dir, const std::string& snapshot_dir,
 }
 
     TreeHead::TreeHead(const std::string& dir, const std::string& log_path, const std::string& snapshot_dir,
-                       leveldb::DB* db,slab::TreeSeries* tree_series, bool sync): pwal_m_(this, wal_num, log_path),log_path_(log_path),last_source_group_id_(0),last_metric_id_(0),hash_shards_(STRIPE_SIZE),inverted_index_(log_path_),dir_(dir),db_(db),tree_series_(tree_series),sync_api_(sync),concurrency_enabled_(false),flush_cnt_(0),flat_version_(0),
+                       leveldb::DB* db,slab::ValueLog* value_log, bool sync): pwal_m_(this, wal_num, log_path),log_path_(log_path),last_source_group_id_(0),last_metric_id_(0),hash_shards_(STRIPE_SIZE),inverted_index_(log_path_),dir_(dir),db_(db),value_log_(value_log),sync_api_(sync),concurrency_enabled_(false),flush_cnt_(0),flat_version_(0),
                                                                                   mem_to_disk_migration_threshold_(MEM_TO_DISK_MIGRATION_THRESHOLD),
                                                                                   migration_enabled_(false),
                                                                                   no_log_(false) {
@@ -334,7 +334,7 @@ leveldb::Status TreeHead::recover_index_from_log() {
         while (r.ReadRecord(&record, &scratch)) {
             if (record.data()[0] == leveldb::log::kSeries) {
                 std::vector<tsdb::tsdbutil::TreeRefSeries> rs;
-                bool success = leveldb::log::treeSeries(record, &rs);
+                bool success = leveldb::log::valueLog(record, &rs);
                 if (!success) {
                     return leveldb::Status::Corruption("series recover_index_from_log");
                 }
@@ -466,7 +466,7 @@ leveldb::Status TreeHead::clean_sample_log(int seq) {
                     ms = read_flat_forward_index(r.sgid, r.mid);
                     uint8_t idx;
                     while (ms->sid_ == std::numeric_limits<uint32_t>::max()){}
-                    slab::SlabInfo* slabInfo = tree_series_->GetMemSlabInfo(ms->source_id_,ms->metric_id_,ms->sid_,idx);
+                    slab::SlabInfo* slabInfo = value_log_->GetMemSlabInfo(ms->source_id_,ms->metric_id_,ms->sid_,idx);
                     if (r.txn > slabInfo->txn_[idx]) {
                         reserve.emplace_back(r);
                     }
@@ -634,7 +634,7 @@ void TreeHead::update_min_max_time(int64_t mint, int64_t maxt) {
 
 std::unique_ptr<db::AppenderInterface> TreeHead::head_appender() {
   return std::unique_ptr<db::AppenderInterface>(
-      new TreeHeadAppender(const_cast<TreeHead*>(this), tree_series_, db_));
+      new TreeHeadAppender(const_cast<TreeHead*>(this), value_log_, db_));
 }
 
 std::unique_ptr<db::AppenderInterface> TreeHead::appender() {
@@ -1143,7 +1143,7 @@ void _head_global_garbage_collection(TreeHead* h) {
 leveldb::Status TreeHead::flush_db() {
     std::vector<std::pair<slab::SlabInfo*, slab::Slab*>> migrate_array;
     bool is_seq = false;
-    auto status = tree_series_->MigrateReadLazyFlush(migrate_array, is_seq);
+    auto status = value_log_->MigrateReadLazyFlush(migrate_array, is_seq);
     if(!status){
         return leveldb::Status::OK();
     }
@@ -1151,9 +1151,9 @@ leveldb::Status TreeHead::flush_db() {
     for(auto &it:migrate_array){
         for(uint8_t i=0;i<it.first->idx_;i++){
             key_.clear();
-            uint64_t sgid = tree_series_->GetSinfoSourceID(it.first,i);
-            uint16_t mid = tree_series_->GetSinfoMetricID(it.first,i);
-            tree_series_->EnCodeKey(&key_, sgid, mid,it.first->start_time_[i]);
+            uint64_t sgid = value_log_->GetSinfoSourceID(it.first,i);
+            uint16_t mid = value_log_->GetSinfoMetricID(it.first,i);
+            value_log_->EnCodeKey(&key_, sgid, mid,it.first->start_time_[i]);
             uint8_t sub_idx = 0;
             for(uint8_t j=0;j<it.first->nalloc_;j++){
                 uint64_t temp_sgid;
@@ -1189,15 +1189,15 @@ leveldb::Status TreeHead::flush_db() {
 //            uint64_t start_time;
 //            auto item = (slab::Item*)(it.second+i*slab::SLAB_ITEM_SIZE);
 //            DecodeItemChunkHeader(item,mid,sgid,start_time);
-//            tree_series_->EnCodeKey(&key_, sgid, mid,start_time);
+//            value_log_->EnCodeKey(&key_, sgid, mid,start_time);
 //            s = db_->Put(leveldb::WriteOptions(), key_,
 //                         leveldb::Slice(reinterpret_cast<char*>(it.second + i*slab::SLAB_ITEM_SIZE),
 //                                        slab::SLAB_ITEM_SIZE));
 //            //std::cout<<" sgid :"<<sgid<<" mid :"<<mid<<std::endl;
 //        }
 //        for(uint8_t i=0;i<it.first->idx_;i++){
-//            uint64_t sgid = tree_series_->GetSinfoSourceID(it.first,i);
-//            uint16_t mid = tree_series_->GetSinfoMetricID(it.first,i);
+//            uint64_t sgid = value_log_->GetSinfoSourceID(it.first,i);
+//            uint16_t mid = value_log_->GetSinfoMetricID(it.first,i);
 //            auto tms = read_flat_forward_index(sgid,mid);
 //            if (tms == nullptr) {
 //                tms = read_flat_forward_index(sgid,mid);
@@ -1205,7 +1205,7 @@ leveldb::Status TreeHead::flush_db() {
 //            tms->level_flush_time_ = it.first->end_time_[i];
 //        }
         if (!is_seq) {
-            tree_series_->FreeBufSlab(it.second);
+            value_log_->FreeBufSlab(it.second);
         }
     }
     return s;
@@ -1274,7 +1274,7 @@ std::pair<TreeMemSeries*, bool> TreeHead::get_or_create_by_thmap(const label::La
     return std::make_pair((TreeMemSeries*)series_ptr, false);
   }
   uint32_t slab_id;
-//  while(!tree_series_->GetMemSlabID(slab_id,sgid,mid)){
+//  while(!value_log_->GetMemSlabID(slab_id,sgid,mid)){
 //  }
     slab_id = std::numeric_limits<uint32_t>::max();
   TreeMemSeries* ms = new TreeMemSeries(sgid,mid,lset,slab_id);
@@ -1289,7 +1289,7 @@ std::pair<TreeMemSeries*, bool> TreeHead::get_or_create_with_id(uint64_t sgid, u
         return std::make_pair((TreeMemSeries*)series_ptr, false);
     }
     uint32_t slab_id;
-//    while(!tree_series_->GetMemSlabID(slab_id,sgid,mid)){
+//    while(!value_log_->GetMemSlabID(slab_id,sgid,mid)){
 //    }
     slab_id = std::numeric_limits<uint32_t>::max();
     TreeMemSeries* ms = new TreeMemSeries(sgid, mid, lset, slab_id);

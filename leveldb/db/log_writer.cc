@@ -291,19 +291,19 @@ void treeSamples(const std::vector<tsdb::tsdbutil::TreeRefSample>& samples, std:
     }
 }
 
-std::string treeSeries(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series) {
+std::string valueLog(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series) {
     std::string result;
-    treeSeries(series, &result);
+    valueLog(series, &result);
     return result;
 }
 
-std::string treeSeries(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size) {
+std::string valueLog(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size) {
     std::string result;
-    treeSeries(series,item_size, &result);
+    valueLog(series,item_size, &result);
     return result;
 }
 
-void treeSeries(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size, std::string* result){
+void valueLog(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size, std::string* result){
     result->push_back(kSeries);
     for(uint32_t i = 0;i < item_size; i++){
         tsdb::tsdbutil::TreeRefSeries* r = series + i;
@@ -325,7 +325,7 @@ void treeSeries(tsdb::tsdbutil::TreeRefSeries* series, uint32_t item_size, std::
     }
 }
 
-void treeSeries(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series, std::string* result) {
+void valueLog(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series, std::string* result) {
     result->push_back(kSeries);
 
     for (tsdb::tsdbutil::TreeRefSeries r : series) {
@@ -347,7 +347,7 @@ void treeSeries(const std::vector<tsdb::tsdbutil::TreeRefSeries>& series, std::s
     }
 }
 
-void treeSeries(const tsdb::tsdbutil::TreeRefSeries& series, std::string* result) {
+void valueLog(const tsdb::tsdbutil::TreeRefSeries& series, std::string* result) {
     result->push_back(kSeries);
 
     PutFixed16(result, series.mid);
