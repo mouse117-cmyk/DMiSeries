@@ -499,6 +499,7 @@ tsdb_test("head/SpanHeadTest.cpp")
 tsdb_test("db/RemoteStorage.cpp")
 tsdb_test("db/DMiSeries_test.cpp")
 tsdb_test("db/db_test.cpp")
+tsdb_test("db/hashkv_test.cpp")
 tsdb_test("parallel_wal/parallel_wal_test.cpp")
 
 tsdb_test("head/tree_head_query_test.cpp")
@@ -512,3 +513,7 @@ target_link_libraries(config_test yaml-cpp)
 
 add_subdirectory(third_party)
 add_subdirectory(test)
+add_subdirectory(HashKV)
+
+find_package(Boost REQUIRED COMPONENTS thread system)
+target_link_libraries(hashkv_test hashkv Boost::thread Boost::system pthread)
