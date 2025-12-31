@@ -1,0 +1,6 @@
+#ifndef TEMPUSCSTORE_VLOG_H
+#define TEMPUSCSTORE_VLOG_H
+
+
+
+#endif  // TEMPUSCSTORE_VLOG_H

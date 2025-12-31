@@ -1,0 +1,142 @@
+// Compile: protoc --cpp_out=. types.proto
+
+syntax = "proto3";
+
+package prometheus;
+
+// MetricMetadata describes the metadata of a Prometheus metric.
+message MetricMetadata {
+  enum MetricType {
+    UNKNOWN        = 0;
+    COUNTER        = 1;
+    GAUGE          = 2;
+    HISTOGRAM      = 3;
+    GAUGEHISTOGRAM = 4;
+    SUMMARY        = 5;
+    INFO           = 6;
+    STATESET       = 7;
+  }
+
+  MetricType type = 1;
+  string metric_family_name = 2;
+  string help = 4;
+  string unit = 5;
+}
+
+// Sample represents a single sample in a time series.
+message Sample {
+  double value = 1;
+  int64 timestamp = 2;  // Timestamp in milliseconds.
+}
+
+// Exemplar represents an exemplar for a histogram or summary.
+message Exemplar {
+  repeated Label labels = 1;
+  double value = 2;
+  int64 timestamp = 3;  // Timestamp in milliseconds.
+}
+
+// Histogram represents a native histogram.
+message Histogram {
+  enum ResetHint {
+    UNKNOWN = 0;  // Need to test for a counter reset explicitly.
+    YES     = 1;  // This is the 1st histogram after a counter reset.
+    NO      = 2;  // There was no counter reset between this and the previous Histogram.
+    GAUGE   = 3;  // This is a gauge histogram where counter resets don't happen.
+  }
+
+  oneof count {
+    uint64 count_int = 1;
+    double count_float = 2;
+  }
+  double sum = 3;  // Sum of observations in the histogram.
+  sint32 schema = 4;  // Bucket schema.
+  double zero_threshold = 5;  // Breadth of the zero bucket.
+  oneof zero_count {
+    uint64 zero_count_int = 6;
+    double zero_count_float = 7;
+  }
+
+  repeated BucketSpan negative_spans = 8;
+  repeated sint64 negative_deltas = 9;
+  repeated double negative_counts = 10;
+
+  repeated BucketSpan positive_spans = 11;
+  repeated sint64 positive_deltas = 12;
+  repeated double positive_counts = 13;
+
+  ResetHint reset_hint = 14;
+  int64 timestamp = 15;  // Timestamp in milliseconds.
+}
+
+// BucketSpan defines a number of consecutive buckets with their offset.
+message BucketSpan {
+  sint32 offset = 1;  // Gap to previous span, or starting point for the 1st span.
+  uint32 length = 2;  // Length of consecutive buckets.
+}
+
+// TimeSeries represents samples and labels for a single time series.
+message TimeSeries {
+  repeated Label labels = 1;
+  repeated Sample samples = 2;
+  repeated Exemplar exemplars = 3;
+  repeated Histogram histograms = 4;
+}
+
+// Label represents a key-value pair for a label.
+message Label {
+  string name = 1;
+  string value = 2;
+}
+
+// Labels represents a set of labels.
+message Labels {
+  repeated Label labels = 1;
+}
+
+// LabelMatcher specifies a rule to match a set of labels.
+message LabelMatcher {
+  enum Type {
+    EQ  = 0;  // Equal.
+    NEQ = 1;  // Not equal.
+    RE  = 2;  // Regular expression match.
+    NRE = 3;  // Regular expression non-match.
+  }
+
+  Type type = 1;
+  string name = 2;
+  string value = 3;
+}
+
+// ReadHints provides additional information for read operations.
+message ReadHints {
+  int64 step_ms = 1;  // Query step size in milliseconds.
+  string func = 2;    // Surrounding function or aggregation.
+  int64 start_ms = 3; // Start time in milliseconds.
+  int64 end_ms = 4;   // End time in milliseconds.
+  repeated string grouping = 5; // Label names used in aggregation.
+  bool by = 6;        // Indicates whether it is "without" or "by".
+  int64 range_ms = 7; // Range vector selector range in milliseconds.
+}
+
+// Chunk represents a TSDB chunk.
+message Chunk {
+  int64 min_time_ms = 1;  // Minimum timestamp in milliseconds.
+  int64 max_time_ms = 2;  // Maximum timestamp in milliseconds.
+
+  enum Encoding {
+    UNKNOWN = 0;
+    XOR = 1;
+    HISTOGRAM = 2;
+    FLOAT_HISTOGRAM = 3;
+  }
+
+  Encoding type = 3;
+  bytes data = 4;  // Chunk data.
+}
+
+// ChunkedSeries represents a single, encoded time series.
+message ChunkedSeries {
+  repeated Label labels = 1;
+  repeated Chunk chunks = 2;
+}
